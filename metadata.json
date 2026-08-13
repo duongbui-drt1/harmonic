@@ -1,0 +1,6 @@
+{
+  "name": "Chord Progression Analyzer & Composer",
+  "description": "Interactive music theory tool to analyze, build, play, and export chord progressions with realistic sample audio and AI assistance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
