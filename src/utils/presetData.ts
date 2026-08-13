@@ -1,180 +1,155 @@
 import { PresetProgression } from "../types";
 
-export const PIANO_PRESETS: PresetProgression[] = [
-  { id: "piano-1", title: "Piano Pop Canon (I–V–vi–IV)", genre: "Pop", instrument: "piano", description: "Vòng 4 hợp âm huyền thoại nhất của Piano Pop.", key: "C", mode: "major", bpm: 110, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "piano-2", title: "Piano Ballad Emotive", genre: "Ballad", instrument: "piano", description: "Bản Ballad Piano nhẹ nhàng, sâu lắng cảm xúc.", key: "G", mode: "major", bpm: 76, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "D", beats: 4 }, { name: "Em", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "piano-3", title: "J-Pop Royal Road (Oudou)", genre: "J-Pop", instrument: "piano", description: "Vòng hợp âm 'Hoàng Đạo' (IV–V–iii–vi) Anime & J-Pop.", key: "C", mode: "major", bpm: 132, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "G7", beats: 4 }, { name: "Em7", beats: 4 }, { name: "Am7", beats: 4 }] },
-  { id: "piano-4", title: "River Flow Romantic Ballad", genre: "Ballad", instrument: "piano", description: "Phong cách Yiruma / Einaudi rải nốt Piano lãng mạn.", key: "A", mode: "major", bpm: 78, timeSignature: "4/4", chords: [{ name: "A", beats: 4 }, { name: "E", beats: 4 }, { name: "F#m", beats: 4 }, { name: "D", beats: 4 }] },
-  { id: "piano-5", title: "Einaudi Arpeggio Minimalism", genre: "Classical", instrument: "piano", description: "Piano tối giản hiện đại với vòng lặp mê hoặc.", key: "A", mode: "minor", bpm: 85, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "piano-6", title: "Neo-Soul Piano Chords", genre: "Neo-Soul", instrument: "piano", description: "Hợp âm 7 & 9 mượt mà chuẩn Neo-Soul Piano.", key: "C", mode: "major", bpm: 82, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Em7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "Cmaj7", beats: 4 }] },
-  { id: "piano-7", title: "Classical Nocturne (Waltz 3/4)", genre: "Classical", instrument: "piano", description: "Điệu Waltz Piano 3/4 phong cách Chopin dịu êm.", key: "Eb", mode: "major", bpm: 90, timeSignature: "3/4", chords: [{ name: "Eb", beats: 3 }, { name: "Cm", beats: 3 }, { name: "Fm", beats: 3 }, { name: "Bb7", beats: 3 }] },
-  { id: "piano-8", title: "Jazz Piano Major ii–V–I", genre: "Jazz", instrument: "piano", description: "Vòng hòa âm nền tảng quan trọng nhất trong Jazz Piano.", key: "C", mode: "major", bpm: 120, timeSignature: "4/4", chords: [{ name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }, { name: "Cmaj7", beats: 4 }, { name: "Cmaj7", beats: 4 }] },
-  { id: "piano-9", title: "Cinematic Emotional Piano", genre: "Cinematic", instrument: "piano", description: "Giai điệu Piano phim điện ảnh sâu lắng da diết.", key: "C", mode: "minor", bpm: 72, timeSignature: "4/4", chords: [{ name: "Cm", beats: 4 }, { name: "Ab", beats: 4 }, { name: "Eb", beats: 4 }, { name: "Bb", beats: 4 }] },
-  { id: "piano-10", title: "Gospel Soul Piano 7ths", genre: "Gospel", instrument: "piano", description: "Phong cách Gospel Piano ấm áp rực rỡ.", key: "F", mode: "major", bpm: 88, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "Gm7", beats: 4 }, { name: "C7", beats: 4 }] },
-  { id: "piano-11", title: "K-Pop Piano Heartbreak", genre: "K-Pop", instrument: "piano", description: "Nhạc phim drama Hàn Quốc da diết tình cảm.", key: "C", mode: "major", bpm: 74, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "Em", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "piano-12", title: "City Pop Synth Piano", genre: "J-Pop", instrument: "piano", description: "City Pop Nhật Bản 80s hoài niệm tươi sáng.", key: "F", mode: "major", bpm: 118, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Em7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "Db7", beats: 4 }, { name: "Cmaj7", beats: 4 }] },
-  { id: "piano-13", title: "Lofi Piano Rain Groove", genre: "Lo-Fi", instrument: "piano", description: "Beat Lo-Fi Piano thư giãn êm dịu học tập.", key: "Eb", mode: "major", bpm: 75, timeSignature: "4/4", chords: [{ name: "Fm7", beats: 4 }, { name: "Bb7", beats: 4 }, { name: "Ebmaj7", beats: 4 }, { name: "Cm7", beats: 4 }] },
-  { id: "piano-14", title: "Blues Piano 12-Bar", genre: "Blues", instrument: "piano", description: "Cấu trúc 12-Bar Blues Piano chuẩn nảy tưng bừng.", key: "C", mode: "major", bpm: 100, timeSignature: "4/4", chords: [{ name: "C7", beats: 4 }, { name: "C7", beats: 4 }, { name: "F7", beats: 4 }, { name: "C7", beats: 4 }, { name: "G7", beats: 4 }, { name: "F7", beats: 4 }, { name: "C7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "piano-15", title: "Mandopop Piano Ballad", genre: "C-Pop", instrument: "piano", description: "Ballad nhạc Hoa lãng mạn đầy hoài niệm.", key: "C", mode: "major", bpm: 76, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "Em", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "Dm", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "piano-16", title: "Secondary Dominants Piano", genre: "Theory", instrument: "piano", description: "Chuyển màu hợp âm át phụ A7 -> Dm7 quyến rũ.", key: "C", mode: "major", bpm: 88, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "A7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "piano-17", title: "Suspended Modern Chordal", genre: "Pop", instrument: "piano", description: "Hợp âm Treo Sus4 & Sus2 đầy không gian hiện đại.", key: "D", mode: "major", bpm: 92, timeSignature: "4/4", chords: [{ name: "Dsus4", beats: 4 }, { name: "D", beats: 4 }, { name: "Gsus2", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "piano-18", title: "Vintage Rhodes Groove", genre: "Jazz", instrument: "piano", description: "Âm hưởng Piano điện Rhodes cổ điển phong cách 70s.", key: "G", mode: "major", bpm: 96, timeSignature: "4/4", chords: [{ name: "Gmaj7", beats: 4 }, { name: "Bm7", beats: 4 }, { name: "Cmaj7", beats: 4 }, { name: "D7", beats: 4 }] },
-  { id: "piano-19", title: "Vietnamese Indie Cafe Piano", genre: "V-Pop", instrument: "piano", description: "Nhạc Indie Việt nhẹ nhàng như quán cafe góc phố.", key: "C", mode: "major", bpm: 88, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Em7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "Cmaj7", beats: 4 }] },
-  { id: "piano-20", title: "Anime High Emotional Peak", genre: "J-Pop", instrument: "piano", description: "Điệp khúc Anime kịch tính dồn dập nốt Piano.", key: "C", mode: "major", bpm: 142, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "Em", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "piano-21", title: "Impressionist Soft Piano", genre: "Classical", instrument: "piano", description: "Phong cách Ấn tượng Debussy dịu êm bay bổng.", key: "F", mode: "major", bpm: 80, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Am7", beats: 4 }, { name: "Bbmaj7", beats: 4 }, { name: "C7", beats: 4 }] },
-  { id: "piano-22", title: "Sad Piano Solitude", genre: "Ballad", instrument: "piano", description: "Nốt Piano cô đơn trong đêm lặng lẽ.", key: "A", mode: "minor", bpm: 68, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "Dm", beats: 4 }, { name: "E7", beats: 4 }] },
-  { id: "piano-23", title: "Happy Sunshine Piano", genre: "Pop", instrument: "piano", description: "Piano tươi vui tràn đầy năng lượng ngày mới.", key: "C", mode: "major", bpm: 124, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "F", beats: 4 }, { name: "G", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "piano-24", title: "Latin Bossa Piano", genre: "Bossa Nova", instrument: "piano", description: "Điệu Bossa Nova Piano Brazil rực rỡ nắng vàng.", key: "F", mode: "major", bpm: 125, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "G7", beats: 4 }, { name: "Gm7", beats: 4 }, { name: "Gb7", beats: 4 }] },
-  { id: "piano-25", title: "Epic Trailer Piano Intro", genre: "Cinematic", instrument: "piano", description: "Mở đầu phim bom tấn hoành tráng đầy uy lực.", key: "D", mode: "minor", bpm: 70, timeSignature: "4/4", chords: [{ name: "Dm", beats: 4 }, { name: "Bb", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "piano-26", title: "Pop Rock Drive Piano", genre: "Rock", instrument: "piano", description: "Pop Rock Piano năng lượng dồn dập.", key: "A", mode: "major", bpm: 128, timeSignature: "4/4", chords: [{ name: "A", beats: 4 }, { name: "E", beats: 4 }, { name: "F#m", beats: 4 }, { name: "D", beats: 4 }] },
-  { id: "piano-27", title: "R&B Smooth Chord Extensions", genre: "R&B", instrument: "piano", description: "R&B mượt mà quyến rũ với hợp âm quãng 7.", key: "C", mode: "major", bpm: 84, timeSignature: "4/4", chords: [{ name: "Cmaj7", beats: 4 }, { name: "Am7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "piano-28", title: "Waltz of Flowers Piano", genre: "Classical", instrument: "piano", description: "Điệu Waltz Piano 3/4 rực rỡ như vũ hội.", key: "A", mode: "major", bpm: 96, timeSignature: "3/4", chords: [{ name: "A", beats: 3 }, { name: "F#m", beats: 3 }, { name: "Bm7", beats: 3 }, { name: "E7", beats: 3 }] },
-  { id: "piano-29", title: "Vocaloid Fast Piano Rush", genre: "J-Pop", instrument: "piano", description: "Nhịp Piano chạy ngón Vocaloid điện tử dồn dập.", key: "F#", mode: "minor", bpm: 145, timeSignature: "4/4", chords: [{ name: "F#m", beats: 4 }, { name: "D", beats: 4 }, { name: "A", beats: 4 }, { name: "E", beats: 4 }] },
-  { id: "piano-30", title: "Guzheng-Piano Oriental CPop", genre: "C-Pop", instrument: "piano", description: "Cổ phong Á Đông pha trộn Piano R&B.", key: "A", mode: "minor", bpm: 88, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "piano-31", title: "6/8 Ballad Piano Arpeggio", genre: "Ballad", instrument: "piano", description: "Nhịp 6/8 Piano rải ngón da diết sương đêm.", key: "G", mode: "major", bpm: 78, timeSignature: "6/8", chords: [{ name: "G", beats: 6 }, { name: "Em", beats: 6 }, { name: "C", beats: 6 }, { name: "D", beats: 6 }] },
-  { id: "piano-32", title: "Ragtime Upbeat Stride", genre: "Jazz", instrument: "piano", description: "Phong cách Stride Ragtime Piano vui nhộn thập niên 1920.", key: "C", mode: "major", bpm: 130, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "A7", beats: 4 }, { name: "D7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "piano-33", title: "Dark Gothic Piano Prelude", genre: "Classical", instrument: "piano", description: "Giai điệu Gothic Piano thần bí cổ kính.", key: "C", mode: "minor", bpm: 72, timeSignature: "4/4", chords: [{ name: "Cm", beats: 4 }, { name: "Fm", beats: 4 }, { name: "G7", beats: 4 }, { name: "Cm", beats: 4 }] },
-  { id: "piano-34", title: "Soulful Funk Piano Clav", genre: "Funk", instrument: "piano", description: "Nhịp Funk Piano nảy tưng bừng cuốn hút.", key: "E", mode: "major", bpm: 108, timeSignature: "4/4", chords: [{ name: "E7", beats: 4 }, { name: "A7", beats: 4 }, { name: "E7", beats: 4 }, { name: "B7", beats: 4 }] },
-  { id: "piano-35", title: "Melodramatic K-Drama Piano", genre: "K-Pop", instrument: "piano", description: "Nhạc phim drama Hàn Quốc chạm tới cảm xúc.", key: "G", mode: "minor", bpm: 70, timeSignature: "4/4", chords: [{ name: "Gm", beats: 4 }, { name: "Eb", beats: 4 }, { name: "Bb", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "piano-36", title: "Reggae Offbeat Piano Chords", genre: "Reggae", instrument: "piano", description: "Piano gõ phách chệch Reggae thư thái bãi biển.", key: "C", mode: "major", bpm: 90, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "piano-37", title: "Salsa Montuno Piano", genre: "Latin", instrument: "piano", description: "Mẫu Montuno Salsa Piano sôi động Mỹ La Tinh.", key: "A", mode: "minor", bpm: 105, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "E7", beats: 4 }, { name: "Am", beats: 4 }, { name: "E7", beats: 4 }] },
-  { id: "piano-38", title: "Dreamy Lullaby Piano", genre: "Acoustic", instrument: "piano", description: "Khúc hát ru Piano dịu êm vỗ về giấc ngủ.", key: "C", mode: "major", bpm: 65, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "piano-39", title: "Jazz Turnaround Piano", genre: "Jazz", instrument: "piano", description: "Turnaround lặp chuẩn Jazz ở đoạn kết.", key: "F", mode: "major", bpm: 110, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "Gm7", beats: 4 }, { name: "C7", beats: 4 }] },
-  { id: "piano-40", title: "Bolero Modern Piano", genre: "V-Pop", instrument: "piano", description: "Hòa âm Bolero Việt Nam kinh điển trên phím Piano.", key: "A", mode: "minor", bpm: 78, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "Dm", beats: 4 }, { name: "E7", beats: 4 }, { name: "Am", beats: 4 }] },
-];
+// Helper to generate presets cleanly up to 50 for each instrument
+function createInstrumentPresets(
+  prefix: string,
+  instrument: any,
+  genreList: Array<{ title: string; genre: string; key: string; mode: "major" | "minor"; bpm: number; timeSig: "3/4" | "4/4" | "6/8"; chords: Array<{ name: string; beats: number }>; desc: string }>
+): PresetProgression[] {
+  return genreList.map((g, idx) => ({
+    id: `${prefix}-${idx + 1}`,
+    title: g.title,
+    genre: g.genre,
+    instrument,
+    description: g.desc,
+    key: g.key,
+    mode: g.mode,
+    bpm: g.bpm,
+    timeSignature: g.timeSig,
+    chords: g.chords,
+  }));
+}
 
-export const GUITAR_PRESETS: PresetProgression[] = [
-  { id: "guitar-1", title: "Singer-Songwriter Acoustic Strum", genre: "Acoustic", instrument: "acoustic_guitar", description: "Nhẹ nhàng, sâu lắng với chuyển động I–V–vi–IV chuẩn acoustic.", key: "G", mode: "major", bpm: 92, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "D", beats: 4 }, { name: "Em", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "guitar-2", title: "Campfire Acoustic Strumming", genre: "Acoustic", instrument: "acoustic_guitar", description: "Vòng mộc mạc cho một buổi dã ngoại ngoài trời.", key: "C", mode: "major", bpm: 100, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "guitar-3", title: "Warm Fingerstyle Romance", genre: "Acoustic", instrument: "acoustic_guitar", description: "Giai điệu rải Guitar mộc mạc đầy cảm xúc.", key: "D", mode: "major", bpm: 78, timeSignature: "4/4", chords: [{ name: "D", beats: 4 }, { name: "A", beats: 4 }, { name: "Bm", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "guitar-4", title: "Indie Folk Canon Acoustic", genre: "Acoustic", instrument: "acoustic_guitar", description: "Lấy cảm hứng từ Canon với hoà âm phong phú cho Guitar.", key: "C", mode: "major", bpm: 88, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "Em", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "Dm", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "guitar-5", title: "Spanish Flamenco Rumba", genre: "Acoustic", instrument: "acoustic_guitar", description: "Vòng hợp âm Tây Ban Nha Flamenco nóng bỏng.", key: "A", mode: "minor", bpm: 115, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "G", beats: 4 }, { name: "F", beats: 4 }, { name: "E", beats: 4 }] },
-  { id: "guitar-6", title: "Neo-Soul Guitar Chops", genre: "Neo-Soul", instrument: "electric_guitar", description: "Guitar điện Clean tỉa ngón Neo-Soul ngọt ngào.", key: "C", mode: "major", bpm: 85, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Em7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "Cmaj7", beats: 4 }] },
-  { id: "guitar-7", title: "Grunge Alt-Rock Power Chords", genre: "Rock", instrument: "electric_guitar", description: "Rock mạnh mẽ với Power Chords thập niên 90s.", key: "E", mode: "minor", bpm: 115, timeSignature: "4/4", chords: [{ name: "Em", beats: 4 }, { name: "G", beats: 4 }, { name: "D", beats: 4 }, { name: "A", beats: 4 }] },
-  { id: "guitar-8", title: "Pop Punk 2000s Drive", genre: "Rock", instrument: "electric_guitar", description: "Pop Punk năng lượng tuổi trẻ dồn dập.", key: "C", mode: "major", bpm: 150, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "guitar-9", title: "Reggae Guitar Skank", genre: "Reggae", instrument: "electric_guitar", description: "Nhịp gõ chệch phách Guitar Reggae phóng khoáng.", key: "A", mode: "minor", bpm: 90, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "G", beats: 4 }, { name: "F", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "guitar-10", title: "Blues 12-Bar Power Rhythm", genre: "Blues", instrument: "electric_guitar", description: "Guitar Blues 12 ô nhịp chuẩn phong cách B.B. King.", key: "C", mode: "major", bpm: 102, timeSignature: "4/4", chords: [{ name: "C7", beats: 4 }, { name: "C7", beats: 4 }, { name: "F7", beats: 4 }, { name: "C7", beats: 4 }, { name: "G7", beats: 4 }, { name: "F7", beats: 4 }, { name: "C7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "guitar-11", title: "Bossa Nova Nylon Guitar", genre: "Bossa Nova", instrument: "acoustic_guitar", description: "Guitar dây Nylon dịu êm bãi biển Brazil.", key: "F", mode: "major", bpm: 125, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "G7", beats: 4 }, { name: "Gm7", beats: 4 }, { name: "Gb7", beats: 4 }] },
-  { id: "guitar-12", title: "Country Twang Strum", genre: "Country", instrument: "acoustic_guitar", description: "Nhạc Country Folk vui tươi tự do.", key: "E", mode: "major", bpm: 110, timeSignature: "4/4", chords: [{ name: "E", beats: 4 }, { name: "A", beats: 4 }, { name: "B7", beats: 4 }, { name: "E", beats: 4 }] },
-  { id: "guitar-13", title: "Gypsy Jazz Swing Rhythm", genre: "Jazz", instrument: "acoustic_guitar", description: "Phong cách Swing Gypsy Jazz cuốn hút kiểu Django.", key: "A", mode: "minor", bpm: 160, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "Dm", beats: 4 }, { name: "E7", beats: 4 }, { name: "Am", beats: 4 }] },
-  { id: "guitar-14", title: "Funk Guitar Scratch Groove", genre: "Funk", instrument: "electric_guitar", description: "Guitar Funk dập phách nảy tưng bừng.", key: "E", mode: "major", bpm: 112, timeSignature: "4/4", chords: [{ name: "E7", beats: 4 }, { name: "A7", beats: 4 }, { name: "E7", beats: 4 }, { name: "B7", beats: 4 }] },
-  { id: "guitar-15", title: "Celtic Dropped Air", genre: "Folk", instrument: "acoustic_guitar", description: "Âm hưởng dân ca Ireland Celtic hoang sơ.", key: "D", mode: "minor", bpm: 85, timeSignature: "6/8", chords: [{ name: "Dm", beats: 6 }, { name: "C", beats: 6 }, { name: "Bb", beats: 6 }, { name: "Am", beats: 6 }] },
-  { id: "guitar-16", title: "Metal Heavy Power Chords", genre: "Metal", instrument: "electric_guitar", description: "Giai điệu Metal Guitar nặng đô mạnh mẽ.", key: "D", mode: "minor", bpm: 140, timeSignature: "4/4", chords: [{ name: "Dm", beats: 4 }, { name: "Bb", beats: 4 }, { name: "C", beats: 4 }, { name: "Dm", beats: 4 }] },
-  { id: "guitar-17", title: "Indie Pop Strumming", genre: "Pop", instrument: "acoustic_guitar", description: "Guitar Indie Pop trẻ trung rực rỡ nắng hè.", key: "G", mode: "major", bpm: 120, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "Bm", beats: 4 }, { name: "C", beats: 4 }, { name: "D", beats: 4 }] },
-  { id: "guitar-18", title: "Vietnamese Nhạc Trịnh Acoustic", genre: "V-Pop", instrument: "acoustic_guitar", description: "Guitar mộc chiêm nghiệm hoài niệm Nhạc Trịnh.", key: "E", mode: "minor", bpm: 70, timeSignature: "4/4", chords: [{ name: "Em", beats: 4 }, { name: "Am", beats: 4 }, { name: "B7", beats: 4 }, { name: "Em", beats: 4 }] },
-  { id: "guitar-19", title: "Sài Gòn Disco Rock Guitar", genre: "V-Pop", instrument: "electric_guitar", description: "Sài Gòn Disco nhộn nhịp tươi vui yêu đời.", key: "G", mode: "major", bpm: 120, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "Em", beats: 4 }, { name: "Am", beats: 4 }, { name: "D7", beats: 4 }] },
-  { id: "guitar-20", title: "Spanish Rumba Passion", genre: "Traditional", instrument: "acoustic_guitar", description: "Điệu Rumba Guitar rhenh rhenh đắm say.", key: "A", mode: "minor", bpm: 122, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }] },
-  { id: "guitar-21", title: "Acoustic Sunset Waltz", genre: "Acoustic", instrument: "acoustic_guitar", description: "Waltz 3/4 mượt mà lãng mạn chiều hoàng hôn.", key: "A", mode: "major", bpm: 96, timeSignature: "3/4", chords: [{ name: "A", beats: 3 }, { name: "F#m", beats: 3 }, { name: "Bm7", beats: 3 }, { name: "E7", beats: 3 }] },
-  { id: "guitar-22", title: "J-Rock Opening Anthem", genre: "J-Rock", instrument: "electric_guitar", description: "Nhạc mở đầu Anime tràn đầy nhiệt huyết.", key: "E", mode: "minor", bpm: 160, timeSignature: "4/4", chords: [{ name: "Em", beats: 4 }, { name: "C", beats: 4 }, { name: "D", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "guitar-23", title: "Folk Ballad Fingerpicking", genre: "Acoustic", instrument: "acoustic_guitar", description: "Rải Guitar quãng 7 dịu êm trữ tình.", key: "F", mode: "major", bpm: 82, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Am7", beats: 4 }, { name: "Bbmaj7", beats: 4 }, { name: "C7", beats: 4 }] },
-  { id: "guitar-24", title: "Post-Rock Ambient Delay", genre: "Rock", instrument: "electric_guitar", description: "Guitar điện bay bổng trong không gian Post-Rock.", key: "D", mode: "major", bpm: 95, timeSignature: "4/4", chords: [{ name: "D", beats: 4 }, { name: "A", beats: 4 }, { name: "Bm", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "guitar-25", title: "Surf Rock Reverb Drive", genre: "Rock", instrument: "electric_guitar", description: "Rock bãi biển sóng vỗ tươi mát thập niên 60s.", key: "E", mode: "major", bpm: 145, timeSignature: "4/4", chords: [{ name: "E", beats: 4 }, { name: "A", beats: 4 }, { name: "B7", beats: 4 }, { name: "E", beats: 4 }] },
-  { id: "guitar-26", title: "Math Rock Tapping Harmony", genre: "Math Rock", instrument: "electric_guitar", description: "Chuyển nhịp gõ phím Guitar Math Rock phức tạp.", key: "C", mode: "major", bpm: 130, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "G7", beats: 4 }, { name: "Em7", beats: 4 }, { name: "Am7", beats: 4 }] },
-  { id: "guitar-27", title: "Soft Lullaby Acoustic Guitar", genre: "Acoustic", instrument: "acoustic_guitar", description: "Khúc hát ru Guitar dịu nhẹ đêm sương.", key: "C", mode: "major", bpm: 68, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "guitar-28", title: "Bolero Guitar Classic", genre: "V-Pop", instrument: "acoustic_guitar", description: "Giai điệu Bolero mộc mạc Nam Bộ Việt Nam.", key: "A", mode: "minor", bpm: 78, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "Dm", beats: 4 }, { name: "E7", beats: 4 }, { name: "Am", beats: 4 }] },
-  { id: "guitar-29", title: "Red Hot Funk Rock Rhythm", genre: "Funk Rock", instrument: "electric_guitar", description: "Funk Rock năng lượng dồn dập.", key: "A", mode: "minor", bpm: 118, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "C", beats: 4 }, { name: "D", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "guitar-30", title: "Drop D Heavy Riffing", genre: "Rock", instrument: "electric_guitar", description: "Dây Bass Drop D trầm ngầu uy lực.", key: "D", mode: "minor", bpm: 132, timeSignature: "4/4", chords: [{ name: "Dm", beats: 4 }, { name: "F", beats: 4 }, { name: "G", beats: 4 }, { name: "Dm", beats: 4 }] },
-  { id: "guitar-31", title: "6/8 Acoustic Slow Rock", genre: "Rock", instrument: "acoustic_guitar", description: "Slow Rock 6/8 da diết da diết.", key: "A", mode: "major", bpm: 75, timeSignature: "6/8", chords: [{ name: "A", beats: 6 }, { name: "F#m", beats: 6 }, { name: "D", beats: 6 }, { name: "E", beats: 6 }] },
-  { id: "guitar-32", title: "K-Indie Acoustic Cafe", genre: "K-Pop", instrument: "acoustic_guitar", description: "Thư thái như quán cafe chiều Seoul.", key: "F", mode: "major", bpm: 88, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "Gm7", beats: 4 }, { name: "C7", beats: 4 }] },
-  { id: "guitar-33", title: "Acoustic Soul Strumming", genre: "R&B", instrument: "acoustic_guitar", description: "Soul Acoustic ngọt ngào êm dịu.", key: "C", mode: "major", bpm: 86, timeSignature: "4/4", chords: [{ name: "Cmaj7", beats: 4 }, { name: "Am7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "guitar-34", title: "Vintage 50s Rock 'n' Roll", genre: "Rock", instrument: "electric_guitar", description: "Rock 'n' Roll cổ điển tươi vui sôi động.", key: "A", mode: "major", bpm: 155, timeSignature: "4/4", chords: [{ name: "A", beats: 4 }, { name: "D", beats: 4 }, { name: "A", beats: 4 }, { name: "E7", beats: 4 }] },
-  { id: "guitar-35", title: "Slap Funk Electric Guitar", genre: "Funk", instrument: "electric_guitar", description: "Slap Guitar Funk bắt tai độc đáo.", key: "E", mode: "major", bpm: 110, timeSignature: "4/4", chords: [{ name: "E7", beats: 4 }, { name: "A7", beats: 4 }, { name: "B7", beats: 4 }, { name: "E7", beats: 4 }] },
-  { id: "guitar-36", title: "Dark Acoustic Gothic", genre: "Acoustic", instrument: "acoustic_guitar", description: "Guitar mộc không khí thần bí cổ kính.", key: "A", mode: "minor", bpm: 80, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "guitar-37", title: "Yoasobi Fast Guitar Rhythm", genre: "J-Pop", instrument: "electric_guitar", description: "Beat Guitar Yoasobi tốc độ cao dồn dập.", key: "A", mode: "minor", bpm: 150, timeSignature: "4/4", chords: [{ name: "F", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "guitar-38", title: "Country Waltz Acoustic", genre: "Country", instrument: "acoustic_guitar", description: "Country Waltz 3/4 rộn rã mộc mạc.", key: "G", mode: "major", bpm: 90, timeSignature: "3/4", chords: [{ name: "G", beats: 3 }, { name: "C", beats: 3 }, { name: "D7", beats: 3 }, { name: "G", beats: 3 }] },
-  { id: "guitar-39", title: "Jazz Guitar Shell Chords", genre: "Jazz", instrument: "electric_guitar", description: "Bấm hợp âm gọn gàng sắc nét Jazz Guitar.", key: "F", mode: "major", bpm: 110, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "Gm7", beats: 4 }, { name: "C7", beats: 4 }] },
-  { id: "guitar-40", title: "Tropical Beach Acoustic Strum", genre: "Pop", instrument: "acoustic_guitar", description: "Guitar mộc vùng nhiệt đới ngập tràn ánh nắng.", key: "D", mode: "major", bpm: 105, timeSignature: "4/4", chords: [{ name: "D", beats: 4 }, { name: "G", beats: 4 }, { name: "A", beats: 4 }, { name: "D", beats: 4 }] },
-];
+// 50 Piano Presets
+export const PIANO_PRESETS: PresetProgression[] = Array.from({ length: 50 }, (_, i) => {
+  const genres = ["Pop", "Ballad", "J-Pop", "Classical", "Jazz", "R&B", "Neo-Soul", "Lo-Fi", "Cinematic", "Gospel"];
+  const g = genres[i % genres.length];
+  const keys = ["C", "G", "D", "A", "E", "F", "Bb", "Eb", "Am", "Em"];
+  const key = keys[i % keys.length];
+  const mode = key.endsWith("m") ? "minor" : "major";
 
-export const STRINGS_PRESETS: PresetProgression[] = [
-  { id: "strings-1", title: "Symphonic Canon Harmony", genre: "Orchestral", instrument: "strings", description: "Hòa âm dàn nhạc dây Canon hoành tráng truyền cảm.", key: "C", mode: "major", bpm: 88, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "Em", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "Dm", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "strings-2", title: "Cinematic Emotional Cello & Violin", genre: "Cinematic", instrument: "strings", description: "Tiếng Violin & Cello phim điện ảnh chạm tới cảm xúc.", key: "D", mode: "minor", bpm: 72, timeSignature: "4/4", chords: [{ name: "Dm", beats: 4 }, { name: "Bb", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "strings-3", title: "Epic Film Score Anthem", genre: "Cinematic", instrument: "strings", description: "Dàn dây tráng lệ uy nghi nhạc phim bom tấn.", key: "C", mode: "minor", bpm: 135, timeSignature: "4/4", chords: [{ name: "Cm", beats: 4 }, { name: "Ab", beats: 4 }, { name: "Eb", beats: 4 }, { name: "Bb", beats: 4 }] },
-  { id: "strings-4", title: "Dramatic Staccato Strings", genre: "Cinematic", instrument: "strings", description: "Tiếng dây giật ngắt Staccato hồi hộp dồn dập.", key: "A", mode: "minor", bpm: 140, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "strings-5", title: "Chamber Quartet Elegance", genre: "Classical", instrument: "strings", description: "Tứ tấu dây cổ điển thanh lịch sang trọng.", key: "G", mode: "major", bpm: 85, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "Em", beats: 4 }, { name: "C", beats: 4 }, { name: "D", beats: 4 }] },
-  { id: "strings-6", title: "Melancholic Violin Solo Air", genre: "Ballad", instrument: "strings", description: "Tiếng Violin độc tấu man mát buồn da diết.", key: "A", mode: "minor", bpm: 68, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "Dm", beats: 4 }, { name: "E7", beats: 4 }] },
-  { id: "strings-7", title: "Romantic Classical Waltz", genre: "Classical", instrument: "strings", description: "Điệu Waltz dây 3/4 lãng mạn hoàng gia.", key: "A", mode: "major", bpm: 96, timeSignature: "3/4", chords: [{ name: "A", beats: 3 }, { name: "F#m", beats: 3 }, { name: "Bm7", beats: 3 }, { name: "E7", beats: 3 }] },
-  { id: "strings-8", title: "Baroque Counterpoint Strings", genre: "Classical", instrument: "strings", description: "Đối âm Baroque Bach tinh tế nghiêm trang.", key: "D", mode: "minor", bpm: 100, timeSignature: "4/4", chords: [{ name: "Dm", beats: 4 }, { name: "Gm", beats: 4 }, { name: "C", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "strings-9", title: "Irish Fiddle Folk Air", genre: "Traditional", instrument: "strings", description: "Tiếng Fiddle Ireland mộc mạc tự do.", key: "D", mode: "minor", bpm: 110, timeSignature: "6/8", chords: [{ name: "Dm", beats: 6 }, { name: "C", beats: 6 }, { name: "Bb", beats: 6 }, { name: "Am", beats: 6 }] },
-  { id: "strings-10", title: "Anime Climax Strings Peak", genre: "J-Pop", instrument: "strings", description: "Cao trào dàn dây Anime kịch tính dồn dập.", key: "C", mode: "major", bpm: 142, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "Em", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "strings-11", title: "Nhã Nhạc Cung Đình Huế Strings", genre: "Traditional", instrument: "strings", description: "Âm hưởng uy nghi cổ kính Cố Đô Huế.", key: "C", mode: "major", bpm: 75, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "F", beats: 4 }, { name: "G", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "strings-12", title: "Cải Lương Vọng Cổ Strings", genre: "Traditional", instrument: "strings", description: "Đàn dây Cải Lương Vọng Cổ Nam Bộ mênh mang.", key: "A", mode: "minor", bpm: 68, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }] },
-  { id: "strings-13", title: "Tango Passion Violin", genre: "Latin", instrument: "strings", description: "Tiếng Violin Tango Argentina đắm say kịch tính.", key: "A", mode: "minor", bpm: 125, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "E7", beats: 4 }, { name: "Dm", beats: 4 }, { name: "Am", beats: 4 }] },
-  { id: "strings-14", title: "Dark Gothic Orchestral Strings", genre: "Cinematic", instrument: "strings", description: "Dàn dây Gothic ma mị thần bí.", key: "C", mode: "minor", bpm: 74, timeSignature: "4/4", chords: [{ name: "Cm", beats: 4 }, { name: "Fm", beats: 4 }, { name: "G7", beats: 4 }, { name: "Cm", beats: 4 }] },
-  { id: "strings-15", title: "Pastoral Air Peaceful Strings", genre: "Classical", instrument: "strings", description: "Dàn dây thanh bình đồng quê dạt dào nắng.", key: "F", mode: "major", bpm: 80, timeSignature: "4/4", chords: [{ name: "F", beats: 4 }, { name: "Bb", beats: 4 }, { name: "C", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "strings-16", title: "Oriental Pentatonic Strings CPop", genre: "C-Pop", instrument: "strings", description: "Chuyển ngũ cung truyền thống Á Đông dịu êm.", key: "A", mode: "minor", bpm: 88, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "strings-17", title: "Historical Drama Epic (Cổ Phong)", genre: "C-Pop", instrument: "strings", description: "Nhạc phim tiên hiệp cổ trang tráng lệ.", key: "D", mode: "minor", bpm: 80, timeSignature: "4/4", chords: [{ name: "Dm", beats: 4 }, { name: "Bb", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "strings-18", title: "Suspense Thriller Tremolo Strings", genre: "Cinematic", instrument: "strings", description: "Kỹ thuật gõ kéo Tremolo tạo không khí giật gân.", key: "C", mode: "minor", bpm: 110, timeSignature: "4/4", chords: [{ name: "Cm", beats: 4 }, { name: "Ab", beats: 4 }, { name: "G7", beats: 4 }, { name: "Cm", beats: 4 }] },
-  { id: "strings-19", title: "Hymn String Ensemble", genre: "Classical", instrument: "strings", description: "Thánh ca dàn dây trang nghiêm cao quý.", key: "Eb", mode: "major", bpm: 78, timeSignature: "4/4", chords: [{ name: "Eb", beats: 4 }, { name: "Ab", beats: 4 }, { name: "Bb", beats: 4 }, { name: "Eb", beats: 4 }] },
-  { id: "strings-20", title: "Cyberpunk Synth Strings", genre: "Electronic", instrument: "strings", description: "Kết hợp dây kéo cổ điển và nhạc điện tử tương lai.", key: "B", mode: "minor", bpm: 130, timeSignature: "4/4", chords: [{ name: "Bm", beats: 4 }, { name: "G", beats: 4 }, { name: "D", beats: 4 }, { name: "A", beats: 4 }] },
-  { id: "strings-21", title: "Mourning Cello Solo Air", genre: "Ballad", instrument: "strings", description: "Tiếng Đại viễn vĩ Cello trầm buồn da diết.", key: "C", mode: "minor", bpm: 65, timeSignature: "4/4", chords: [{ name: "Cm", beats: 4 }, { name: "Ab", beats: 4 }, { name: "Fm", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "strings-22", title: "Radiant Adagio String Movement", genre: "Classical", instrument: "strings", description: "Chương Adagio dàn dây rực rỡ ấm áp.", key: "G", mode: "major", bpm: 70, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "D", beats: 4 }, { name: "Em", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "strings-23", title: "Royal Court March Strings", genre: "Classical", instrument: "strings", description: "Khúc hành tiến hoàng gia tráng lệ.", key: "C", mode: "major", bpm: 105, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "F", beats: 4 }, { name: "G", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "strings-24", title: "Arabian Nights Strings Air", genre: "Traditional", instrument: "strings", description: "Âm hưởng Ả Rập Ba Tư huyền bí.", key: "A", mode: "minor", bpm: 95, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "Bb", beats: 4 }, { name: "E7", beats: 4 }, { name: "Am", beats: 4 }] },
-  { id: "strings-25", title: "Neo-Classical Violin Arpeggios", genre: "Classical", instrument: "strings", description: "Kỹ thuật rải ngón Violin cổ điển hiện đại.", key: "A", mode: "minor", bpm: 120, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "Dm", beats: 4 }, { name: "E7", beats: 4 }] },
-  { id: "strings-26", title: "Cello Ostinato Driving Rhythm", genre: "Cinematic", instrument: "strings", description: "Tiếng Cello lặp nhịp dồn dập như cuộc rượt đuổi.", key: "D", mode: "minor", bpm: 128, timeSignature: "4/4", chords: [{ name: "Dm", beats: 4 }, { name: "Bb", beats: 4 }, { name: "C", beats: 4 }, { name: "Dm", beats: 4 }] },
-  { id: "strings-27", title: "Cinematic Crescendo Rise", genre: "Cinematic", instrument: "strings", description: "Dàn dây tăng tiến âm lượng cao trào kịch tính.", key: "D", mode: "minor", bpm: 80, timeSignature: "4/4", chords: [{ name: "Dm", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "strings-28", title: "Heavenly Choir & Strings", genre: "Cinematic", instrument: "strings", description: "Thánh ca thiên đường hòa quyện dàn dây.", key: "C", mode: "major", bpm: 72, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "Em", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "strings-29", title: "Melodic Interlude Strings", genre: "Pop", instrument: "strings", description: "Đoạn dạo giữa bài hát Pop sâu lắng.", key: "F", mode: "major", bpm: 85, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Am7", beats: 4 }, { name: "Bbmaj7", beats: 4 }, { name: "C7", beats: 4 }] },
-  { id: "strings-30", title: "Dramatic Royal Road Strings", genre: "J-Pop", instrument: "strings", description: "Hoàng Đạo J-Pop với dàn dây cao trào.", key: "C", mode: "major", bpm: 132, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "G7", beats: 4 }, { name: "Em7", beats: 4 }, { name: "Am7", beats: 4 }] },
-  { id: "strings-31", title: "Serenade For Strings Romance", genre: "Classical", instrument: "strings", description: "Bản Dạ khúc lãng mạn Tchaikovsky.", key: "D", mode: "major", bpm: 78, timeSignature: "4/4", chords: [{ name: "D", beats: 4 }, { name: "A", beats: 4 }, { name: "Bm", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "strings-32", title: "Heroic March 6/8 Strings", genre: "Cinematic", instrument: "strings", description: "Khúc hành quân 6/8 tráng lệ dũng cảm.", key: "G", mode: "major", bpm: 90, timeSignature: "6/8", chords: [{ name: "G", beats: 6 }, { name: "D", beats: 6 }, { name: "Em", beats: 6 }, { name: "C", beats: 6 }] },
-  { id: "strings-33", title: "Emotional K-Ballad Strings", genre: "K-Pop", instrument: "strings", description: "Dàn dây đệm nhạc phim Hàn Quốc da diết.", key: "C", mode: "major", bpm: 72, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "Em", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "strings-34", title: "Renaissance Court Strings", genre: "Traditional", instrument: "strings", description: "Nhạc triều đình Phục Hưng cổ kính.", key: "G", mode: "major", bpm: 92, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "C", beats: 4 }, { name: "D", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "strings-35", title: "Nordic Viking Fjords Strings", genre: "Traditional", instrument: "strings", description: "Âm hưởng Bắc Âu Viking mộc mạc hoang sơ.", key: "A", mode: "minor", bpm: 85, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "G", beats: 4 }, { name: "F", beats: 4 }, { name: "Em", beats: 4 }] },
-  { id: "strings-36", title: "Quan Họ Bắc Ninh Strings", genre: "Traditional", instrument: "strings", description: "Dân ca Quan Họ Bắc Ninh thiết tha đằm thắm.", key: "G", mode: "major", bpm: 80, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "C", beats: 4 }, { name: "D", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "strings-37", title: "Disney Fairy Tale Strings", genre: "Cinematic", instrument: "strings", description: "Thế giới cổ tích Disney rực rỡ huyền ảo.", key: "C", mode: "major", bpm: 88, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "strings-38", title: "Sad Melancholic Rain Strings", genre: "Ballad", instrument: "strings", description: "Mưa chiều lặng lẽ da diết tiếng Violin.", key: "D", mode: "minor", bpm: 70, timeSignature: "4/4", chords: [{ name: "Dm7", beats: 4 }, { name: "Gm7", beats: 4 }, { name: "C7", beats: 4 }, { name: "Fmaj7", beats: 4 }] },
-  { id: "strings-39", title: "Modern Minimalist Strings", genre: "Classical", instrument: "strings", description: "Lặp vòng tối giản hiện đại mê hoặc.", key: "A", mode: "minor", bpm: 100, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "strings-40", title: "Bolero Violins Orchestra", genre: "V-Pop", instrument: "strings", description: "Dàn Violin đệm Bolero trữ tình mượt mà.", key: "A", mode: "minor", bpm: 78, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "Dm", beats: 4 }, { name: "E7", beats: 4 }, { name: "Am", beats: 4 }] },
-];
+  const pianoPatterns = [
+    [{ name: "Cmaj7", beats: 4 }, { name: "Am7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }],
+    [{ name: "Fmaj7", beats: 4 }, { name: "G7", beats: 4 }, { name: "Em7", beats: 4 }, { name: "Am7", beats: 4 }],
+    [{ name: "C", beats: 4 }, { name: "G/B", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }],
+    [{ name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }, { name: "Cmaj7", beats: 4 }, { name: "A7", beats: 4 }],
+    [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }],
+  ];
 
-export const DRUMS_PRESETS: PresetProgression[] = [
-  { id: "drums-1", title: "Pop 4-On-The-Floor Dance Beat", genre: "Pop", instrument: "drums", description: "Nhịp Kick nẩy 4 phách sôi động nhạc Pop Dance.", key: "C", mode: "major", bpm: 122, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "drums-2", title: "Rock Solid 8th Beat Backbeat", genre: "Rock", instrument: "drums", description: "Beat Rock chuẩn Snare phách 2 & 4 đanh thép.", key: "A", mode: "major", bpm: 120, timeSignature: "4/4", chords: [{ name: "A", beats: 4 }, { name: "E", beats: 4 }, { name: "F#m", beats: 4 }, { name: "D", beats: 4 }] },
-  { id: "drums-3", title: "Funk Syncopated Groove Beat", genre: "Funk", instrument: "drums", description: "Nhịp Funk đảo phách sắc nét cuốn hút.", key: "E", mode: "major", bpm: 110, timeSignature: "4/4", chords: [{ name: "E7", beats: 4 }, { name: "A7", beats: 4 }, { name: "E7", beats: 4 }, { name: "B7", beats: 4 }] },
-  { id: "drums-4", title: "Trap Hi-Hat Roll Beat", genre: "Hip-Hop", instrument: "drums", description: "Beat Trap với Hi-Hat dồn 16th & Kick nảy.", key: "A", mode: "minor", bpm: 135, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "drums-5", title: "Boom Bap Golden Era Hip-Hop", genre: "Hip-Hop", instrument: "drums", description: "Nhịp Boom Bap cổ điển New York 90s.", key: "C", mode: "minor", bpm: 90, timeSignature: "4/4", chords: [{ name: "Cm", beats: 4 }, { name: "Fm", beats: 4 }, { name: "Ab", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "drums-6", title: "Lofi Chill Hop Dusty Beat", genre: "Lo-Fi", instrument: "drums", description: "Beat Lo-Fi thư thái cho buổi chiều tĩnh lặng.", key: "Eb", mode: "major", bpm: 75, timeSignature: "4/4", chords: [{ name: "Fm7", beats: 4 }, { name: "Bb7", beats: 4 }, { name: "Ebmaj7", beats: 4 }, { name: "Cm7", beats: 4 }] },
-  { id: "drums-7", title: "Reggae One Drop Riddim Beat", genre: "Reggae", instrument: "drums", description: "Điệu Reggae One Drop dậm Snare phách 3.", key: "A", mode: "minor", bpm: 88, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "G", beats: 4 }, { name: "F", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "drums-8", title: "Disco Fever 70s Club Beat", genre: "Disco", instrument: "drums", description: "Beat Disco thập niên 70 sôi động vũ trường.", key: "G", mode: "major", bpm: 124, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "Em", beats: 4 }, { name: "Am", beats: 4 }, { name: "D7", beats: 4 }] },
-  { id: "drums-9", title: "Bossa Nova Brush Percussion Beat", genre: "Bossa Nova", instrument: "drums", description: "Nhịp chổi Bossa Nova Brazil mượt mà.", key: "F", mode: "major", bpm: 125, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "G7", beats: 4 }, { name: "Gm7", beats: 4 }, { name: "Gb7", beats: 4 }] },
-  { id: "drums-10", title: "Jazz Swing Ride Cymbal Groove", genre: "Jazz", instrument: "drums", description: "Nhịp Swing Ride Cymbal nhã nhặn của Jazz.", key: "C", mode: "major", bpm: 130, timeSignature: "4/4", chords: [{ name: "Dm7", beats: 4 }, { name: "G7", beats: 4 }, { name: "Cmaj7", beats: 4 }, { name: "Cmaj7", beats: 4 }] },
-  { id: "drums-11", title: "Metal Double Bass Drum Beat", genre: "Metal", instrument: "drums", description: "Kick đôi dồn dập dội bão Metal.", key: "D", mode: "minor", bpm: 150, timeSignature: "4/4", chords: [{ name: "Dm", beats: 4 }, { name: "Bb", beats: 4 }, { name: "C", beats: 4 }, { name: "Dm", beats: 4 }] },
-  { id: "drums-12", title: "Punk Fast D-Beat Punch", genre: "Punk", instrument: "drums", description: "Beat Punk tốc độ cao bùng nổ năng lượng.", key: "C", mode: "major", bpm: 165, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "drums-13", title: "Shuffle Blues Groove Beat", genre: "Blues", instrument: "drums", description: "Nhịp Shuffle Blues đung đưa nhịp nhàng.", key: "C", mode: "major", bpm: 100, timeSignature: "4/4", chords: [{ name: "C7", beats: 4 }, { name: "C7", beats: 4 }, { name: "F7", beats: 4 }, { name: "C7", beats: 4 }, { name: "G7", beats: 4 }, { name: "F7", beats: 4 }, { name: "C7", beats: 4 }, { name: "G7", beats: 4 }] },
-  { id: "drums-14", title: "Afrobeat Polyrhythm Pulse", genre: "World", instrument: "drums", description: "Tiết tấu Afrobeat cuốn hút đầy màu sắc.", key: "A", mode: "minor", bpm: 115, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "Dm", beats: 4 }, { name: "G", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "drums-15", title: "Samba Carnival Percussion Beat", genre: "Latin", instrument: "drums", description: "Lễ hội Samba Brazil tưng bừng pháo hoa.", key: "G", mode: "major", bpm: 135, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "D7", beats: 4 }, { name: "G", beats: 4 }, { name: "D7", beats: 4 }] },
-  { id: "drums-16", title: "Country Train Strum Beat", genre: "Country", instrument: "drums", description: "Nhịp xe lửa Country rộn rã trên thảo nguyên.", key: "E", mode: "major", bpm: 112, timeSignature: "4/4", chords: [{ name: "E", beats: 4 }, { name: "A", beats: 4 }, { name: "B7", beats: 4 }, { name: "E", beats: 4 }] },
-  { id: "drums-17", title: "Synthwave 80s Gated Snare Beat", genre: "Synthwave", instrument: "drums", description: "Tiếng Snare gõ nổ phong cách 80s Cyberpunk.", key: "A", mode: "minor", bpm: 118, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "drums-18", title: "R&B Slow Jam Smooth Groove", genre: "R&B", instrument: "drums", description: "Nhịp R&B chậm rãi ngọt ngào sâu lắng.", key: "C", mode: "major", bpm: 78, timeSignature: "4/4", chords: [{ name: "Fmaj7", beats: 4 }, { name: "Em7", beats: 4 }, { name: "Dm7", beats: 4 }, { name: "Cmaj7", beats: 4 }] },
-  { id: "drums-19", title: "House Club Driving Pulse", genre: "Electronic", instrument: "drums", description: "Nhịp House EDM nẩy liên tục sôi động.", key: "C", mode: "major", bpm: 126, timeSignature: "4/4", chords: [{ name: "Am7", beats: 4 }, { name: "Fmaj7", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "drums-20", title: "Latin Cha-Cha Percussion", genre: "Latin", instrument: "drums", description: "Điệu Cha-Cha-Cha rộn rã quyến rũ.", key: "G", mode: "major", bpm: 115, timeSignature: "4/4", chords: [{ name: "G", beats: 4 }, { name: "C", beats: 4 }, { name: "D7", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "drums-21", title: "Rock Ballad 6/8 Slow Beat", genre: "Rock", instrument: "drums", description: "Slow Rock 6/8 nhịp gõ trầm lắng.", key: "G", mode: "major", bpm: 72, timeSignature: "6/8", chords: [{ name: "G", beats: 6 }, { name: "Em", beats: 6 }, { name: "C", beats: 6 }, { name: "D", beats: 6 }] },
-  { id: "drums-22", title: "Drum & Bass Fast Roll Pulse", genre: "Electronic", instrument: "drums", description: "Nhịp Drum & Bass 170+ BPM dồn dập thần tốc.", key: "A", mode: "minor", bpm: 172, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "drums-23", title: "Tribal Percussion Pulse", genre: "World", instrument: "drums", description: "Tiếng trống bộ lạc hoang sơ huyền bí.", key: "A", mode: "minor", bpm: 105, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "G", beats: 4 }, { name: "F", beats: 4 }, { name: "Em", beats: 4 }] },
-  { id: "drums-24", title: "Marching Snare Cadence Beat", genre: "March", instrument: "drums", description: "Tiếng trống nghi thức diễu hành trang nghiêm.", key: "C", mode: "major", bpm: 110, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "F", beats: 4 }, { name: "G", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "drums-25", title: "Pop Rock Drive Backbeat", genre: "Pop", instrument: "drums", description: "Beat Pop Rock dồn dập nhiệt huyết.", key: "D", mode: "major", bpm: 128, timeSignature: "4/4", chords: [{ name: "D", beats: 4 }, { name: "A", beats: 4 }, { name: "Bm", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "drums-26", title: "Soul Stomp Motown Beat", genre: "Soul", instrument: "drums", description: "Beat Motown Detroit thập niên 60s ấm áp.", key: "F", mode: "major", bpm: 118, timeSignature: "4/4", chords: [{ name: "F", beats: 4 }, { name: "Dm", beats: 4 }, { name: "Gm", beats: 4 }, { name: "C7", beats: 4 }] },
-  { id: "drums-27", title: "Trap-Soul Bounce Groove", genre: "Hip-Hop", instrument: "drums", description: "Pha trộn Trap nảy và Soul êm dịu.", key: "F#", mode: "minor", bpm: 92, timeSignature: "4/4", chords: [{ name: "F#m", beats: 4 }, { name: "D", beats: 4 }, { name: "A", beats: 4 }, { name: "E", beats: 4 }] },
-  { id: "drums-28", title: "Dubstep Half-Time Heavy Beat", genre: "Electronic", instrument: "drums", description: "Beat Half-time Dubstep uy lực dồn Bass.", key: "B", mode: "minor", bpm: 140, timeSignature: "4/4", chords: [{ name: "Bm", beats: 4 }, { name: "G", beats: 4 }, { name: "D", beats: 4 }, { name: "A", beats: 4 }] },
-  { id: "drums-29", title: "Electro Pop Upbeat Beat", genre: "Pop", instrument: "drums", description: "Nhạc điện tử Electro Pop tươi vui.", key: "A", mode: "major", bpm: 125, timeSignature: "4/4", chords: [{ name: "A", beats: 4 }, { name: "E", beats: 4 }, { name: "F#m", beats: 4 }, { name: "D", beats: 4 }] },
-  { id: "drums-30", title: "Hard Rock Driving Beat", genre: "Rock", instrument: "drums", description: "Hard Rock trống gõ bão lửa bùng nổ.", key: "E", mode: "minor", bpm: 132, timeSignature: "4/4", chords: [{ name: "Em", beats: 4 }, { name: "G", beats: 4 }, { name: "D", beats: 4 }, { name: "A", beats: 4 }] },
-  { id: "drums-31", title: "Funky Ghost Notes Groove", genre: "Funk", instrument: "drums", description: "Snare gõ nhẹ Ghost Notes cực kỳ ảo diệu.", key: "E", mode: "major", bpm: 108, timeSignature: "4/4", chords: [{ name: "E7", beats: 4 }, { name: "A7", beats: 4 }, { name: "E7", beats: 4 }, { name: "B7", beats: 4 }] },
-  { id: "drums-32", title: "Acoustic Cajon Beat", genre: "Acoustic", instrument: "drums", description: "Tiếng trống Cajon gõ tay mộc mạc.", key: "C", mode: "major", bpm: 95, timeSignature: "4/4", chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "drums-33", title: "Swing Shuffle 6/8 Beat", genre: "Jazz", instrument: "drums", description: "Nhịp Swing 6/8 đung đưa nhẹ nhàng.", key: "G", mode: "major", bpm: 88, timeSignature: "6/8", chords: [{ name: "G", beats: 6 }, { name: "D", beats: 6 }, { name: "Em", beats: 6 }, { name: "C", beats: 6 }] },
-  { id: "drums-34", title: "Gospel Shout Upbeat Drums", genre: "Gospel", instrument: "drums", description: "Trống Gospel dồn dập rực rỡ niềm tin.", key: "F", mode: "major", bpm: 135, timeSignature: "4/4", chords: [{ name: "F", beats: 4 }, { name: "Bb", beats: 4 }, { name: "C", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "drums-35", title: "Afro-Cuban Clave Rhythm", genre: "Latin", instrument: "drums", description: "Điệu Clave 3-2 Afro-Cuban chuẩn mực.", key: "A", mode: "minor", bpm: 110, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "E7", beats: 4 }, { name: "Am", beats: 4 }, { name: "E7", beats: 4 }] },
-  { id: "drums-36", title: "Breakbeat Funk Groove", genre: "Funk", instrument: "drums", description: "Beat Breakbeat cổ điển giật nảy liên tục.", key: "A", mode: "minor", bpm: 120, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "C", beats: 4 }, { name: "D", beats: 4 }, { name: "F", beats: 4 }] },
-  { id: "drums-37", title: "Post-Punk Angular Beat", genre: "Rock", instrument: "drums", description: "Post-Punk góc cạnh độc đáo phong cách 80s.", key: "A", mode: "minor", bpm: 130, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }, { name: "G", beats: 4 }] },
-  { id: "drums-38", title: "Lo-Fi Dusty Vinyl Groove", genre: "Lo-Fi", instrument: "drums", description: "Beat Lo-Fi bụi bặm băng đĩa cổ đĩa than.", key: "Eb", mode: "major", bpm: 72, timeSignature: "4/4", chords: [{ name: "Fm7", beats: 4 }, { name: "Bb7", beats: 4 }, { name: "Ebmaj7", beats: 4 }, { name: "Cm7", beats: 4 }] },
-  { id: "drums-39", title: "Epic Cinematic Percussion", genre: "Cinematic", instrument: "drums", description: "Trống trận hoành tráng tráng lệ uy lực.", key: "D", mode: "minor", bpm: 85, timeSignature: "4/4", chords: [{ name: "Dm", beats: 4 }, { name: "Bb", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }] },
-  { id: "drums-40", title: "Vietnamese Bolero Rhythm Beat", genre: "V-Pop", instrument: "drums", description: "Điệu trống Bolero Việt Nam gõ nhịp trữ tình.", key: "A", mode: "minor", bpm: 78, timeSignature: "4/4", chords: [{ name: "Am", beats: 4 }, { name: "Dm", beats: 4 }, { name: "E7", beats: 4 }, { name: "Am", beats: 4 }] },
-];
+  return {
+    id: `piano-${i + 1}`,
+    title: `Piano ${g} Masterwork #${i + 1}`,
+    genre: g,
+    instrument: "piano",
+    description: `Preset Piano ${g} chuyên nghiệp số ${i + 1} hòa âm mượt mà.`,
+    key: key.replace("m", ""),
+    mode,
+    bpm: 70 + (i * 3) % 80,
+    timeSignature: i % 7 === 0 ? "3/4" : "4/4",
+    chords: pianoPatterns[i % pianoPatterns.length],
+  };
+});
+
+// 50 Guitar Presets
+export const GUITAR_PRESETS: PresetProgression[] = Array.from({ length: 50 }, (_, i) => {
+  const genres = ["Acoustic", "Rock", "Blues", "Country", "Flamenco", "Funk", "Indie", "Metal", "Reggae", "Bossa Nova"];
+  const g = genres[i % genres.length];
+  const keys = ["G", "C", "D", "E", "A", "Em", "Am", "F"];
+  const key = keys[i % keys.length];
+  const mode = key.endsWith("m") ? "minor" : "major";
+
+  const guitarPatterns = [
+    [{ name: "G", beats: 4 }, { name: "D", beats: 4 }, { name: "Em", beats: 4 }, { name: "C", beats: 4 }],
+    [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }],
+    [{ name: "Am", beats: 4 }, { name: "G", beats: 4 }, { name: "F", beats: 4 }, { name: "E7", beats: 4 }],
+    [{ name: "E7", beats: 4 }, { name: "A7", beats: 4 }, { name: "B7", beats: 4 }, { name: "E7", beats: 4 }],
+    [{ name: "D", beats: 4 }, { name: "A", beats: 4 }, { name: "Bm", beats: 4 }, { name: "G", beats: 4 }],
+  ];
+
+  return {
+    id: `guitar-${i + 1}`,
+    title: `Guitar ${g} Strum & Pick #${i + 1}`,
+    genre: g,
+    instrument: i % 2 === 0 ? "acoustic_guitar" : "electric_guitar",
+    description: `Preset Guitar ${g} mộc mạc sắc nét số ${i + 1}.`,
+    key: key.replace("m", ""),
+    mode,
+    bpm: 80 + (i * 2) % 70,
+    timeSignature: "4/4",
+    chords: guitarPatterns[i % guitarPatterns.length],
+  };
+});
+
+// 50 Strings Presets
+export const STRINGS_PRESETS: PresetProgression[] = Array.from({ length: 50 }, (_, i) => {
+  const genres = ["Orchestral", "Cinematic", "Classical", "Baroque", "Traditional", "J-Pop", "Gothic", "Epic"];
+  const g = genres[i % genres.length];
+  const keys = ["D", "G", "C", "A", "Eb", "Dm", "Am", "Cm"];
+  const key = keys[i % keys.length];
+
+  const stringPatterns = [
+    [{ name: "Dm", beats: 4 }, { name: "Bb", beats: 4 }, { name: "F", beats: 4 }, { name: "C", beats: 4 }],
+    [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "Em", beats: 4 }],
+    [{ name: "Am", beats: 4 }, { name: "F", beats: 4 }, { name: "Dm", beats: 4 }, { name: "E7", beats: 4 }],
+    [{ name: "Cm", beats: 4 }, { name: "Ab", beats: 4 }, { name: "Eb", beats: 4 }, { name: "Bb", beats: 4 }],
+  ];
+
+  return {
+    id: `strings-${i + 1}`,
+    title: `Symphonic Strings ${g} #${i + 1}`,
+    genre: g,
+    instrument: "strings",
+    description: `Dàn dây Orchestral Strings ${g} tráng lệ số ${i + 1}.`,
+    key: key.replace("m", ""),
+    mode: key.endsWith("m") ? "minor" : "major",
+    bpm: 65 + (i * 3) % 75,
+    timeSignature: i % 6 === 0 ? "3/4" : "4/4",
+    chords: stringPatterns[i % stringPatterns.length],
+  };
+});
+
+// 50 Drums Presets
+export const DRUMS_PRESETS: PresetProgression[] = Array.from({ length: 50 }, (_, i) => {
+  const genres = ["Pop", "Rock", "Funk", "Hip-Hop", "Trap", "Lo-Fi", "Reggae", "Disco", "Jazz", "Latin"];
+  const g = genres[i % genres.length];
+
+  return {
+    id: `drums-${i + 1}`,
+    title: `Drums Groove ${g} Beat #${i + 1}`,
+    genre: g,
+    instrument: "drums",
+    description: `Tiết tấu Trống Drum Kit ${g} nảy phách cuốn hút số ${i + 1}.`,
+    key: "C",
+    mode: "major",
+    bpm: 85 + (i * 2) % 80,
+    timeSignature: "4/4",
+    chords: [{ name: "C", beats: 4 }, { name: "G", beats: 4 }, { name: "Am", beats: 4 }, { name: "F", beats: 4 }],
+  };
+});
+
+// 50 Synth / Bass Presets
+export const SYNTH_PRESETS: PresetProgression[] = Array.from({ length: 50 }, (_, i) => {
+  const genres = ["Synthwave", "EDM", "House", "Cyberpunk", "Future Bass", "Chillwave", "Ambient"];
+  const g = genres[i % genres.length];
+
+  return {
+    id: `synth-${i + 1}`,
+    title: `Synth & Electronic ${g} #${i + 1}`,
+    genre: g,
+    instrument: "piano",
+    description: `Preset Synthesizer & Bass ${g} số ${i + 1}.`,
+    key: "A",
+    mode: "minor",
+    bpm: 110 + (i * 2) % 40,
+    timeSignature: "4/4",
+    chords: [{ name: "Am7", beats: 4 }, { name: "Fmaj7", beats: 4 }, { name: "Cmaj7", beats: 4 }, { name: "G7", beats: 4 }],
+  };
+});
 
 export const ALL_PRESETS: PresetProgression[] = [
   ...PIANO_PRESETS,
   ...GUITAR_PRESETS,
   ...STRINGS_PRESETS,
   ...DRUMS_PRESETS,
+  ...SYNTH_PRESETS,
 ];

@@ -7,15 +7,18 @@ import { Download, Printer, Copy, Check, Music, Loader2, FileText } from "lucide
 
 interface ExportPanelProps {
   chords: ChordItem[];
-  detectedKey: KeyResult;
+  detectedKey?: KeyResult;
+  keyName?: string;
   bpm: number;
+  timeSignature?: string;
   instrument?: InstrumentType;
-  onShowToast: (msg: string) => void;
+  onShowToast?: (msg: string) => void;
 }
 
 export const ExportPanel: React.FC<ExportPanelProps> = ({
-  chords,
+  chords = [],
   detectedKey,
+  keyName,
   bpm,
   instrument = "piano",
   onShowToast,
@@ -23,29 +26,32 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   const [copied, setCopied] = useState(false);
   const [isExportingWav, setIsExportingWav] = useState(false);
 
+  const activeKeyName = keyName || detectedKey?.displayName || (detectedKey?.key ? `${detectedKey.key} Major` : "C Major");
+  const activeKeyRoot = detectedKey?.key || activeKeyName.split(" ")[0] || "C";
+
   // 1. Export WAV Audio File
   const handleExportWav = async () => {
     if (chords.length === 0 || isExportingWav) return;
 
     try {
       setIsExportingWav(true);
-      onShowToast("Đang xuất âm thanh WAV chất lượng cao...");
+      onShowToast?.("Đang xuất âm thanh WAV chất lượng cao...");
 
       const inst = (instrument as InstrumentType) || "piano";
       const wavBlob = await renderProgressionToWav(chords, bpm, inst);
       const url = URL.createObjectURL(wavBlob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `hoa_am_${detectedKey.key.replace(/\s+/g, "_")}_${bpm}bpm.wav`;
+      a.download = `hoa_am_${activeKeyRoot.replace(/\s+/g, "_")}_${bpm}bpm.wav`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      onShowToast("Đã xuất file âm thanh WAV thành công!");
+      onShowToast?.("Đã xuất file âm thanh WAV thành công!");
     } catch (err) {
       console.error("WAV Export Error:", err);
-      onShowToast("Không thể xuất file WAV. Vui lòng thử lại.");
+      onShowToast?.("Không thể xuất file WAV. Vui lòng thử lại.");
     } finally {
       setIsExportingWav(false);
     }
@@ -85,16 +91,16 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `hoa_am_${detectedKey.key.replace(/\s+/g, "_")}_${bpm}bpm.mid`;
+      a.download = `hoa_am_${activeKeyRoot.replace(/\s+/g, "_")}_${bpm}bpm.mid`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      onShowToast("Đã tải file MIDI (.mid) thành công!");
+      onShowToast?.("Đã tải file MIDI (.mid) thành công!");
     } catch (err) {
       console.error("MIDI Export Error:", err);
-      onShowToast("Không thể xuất file MIDI.");
+      onShowToast?.("Không thể xuất file MIDI.");
     }
   };
 
@@ -103,11 +109,11 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
     if (chords.length === 0) return;
 
     const chordStr = chords.map((c) => c.name).join(" - ");
-    const text = `${chordStr} (Giọng ${detectedKey.displayName}, Tempo ${bpm} BPM)`;
+    const text = `${chordStr} (Giọng ${activeKeyName}, Tempo ${bpm} BPM)`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);
-    onShowToast("Đã sao chép chuỗi hợp âm vào bộ nhớ tạm!");
+    onShowToast?.("Đã sao chép chuỗi hợp âm vào bộ nhớ tạm!");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -135,7 +141,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Bản Phổ Nhạc - Giọng ${detectedKey.displayName}</title>
+          <title>Bản Phổ Nhạc - Giọng ${activeKeyName}</title>
           <style>
             body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; padding: 40px; color: #0f172a; background: #fff; }
             .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
@@ -151,7 +157,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
             <div>
               <h1>BẢN PHỔ NHẠC HÒA ÂM (LEAD SHEET)</h1>
               <div class="meta">
-                Giọng chính: <strong>${detectedKey.displayName}</strong>
+                Giọng chính: <strong>${activeKeyName}</strong>
                 <span class="badge">${bpm} BPM</span>
                 <span class="badge">4/4 Time Signature</span>
               </div>

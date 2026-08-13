@@ -3,48 +3,90 @@ import { InstrumentType } from "../types";
 import { Play, Pause, Square, Repeat, Timer, Loader2, Volume2, VolumeX } from "lucide-react";
 
 interface PlaybackControlsProps {
-  isPlaying: boolean;
-  isLoading: boolean;
-  loadingStatus: string;
-  loadingPercent: number;
-  bpm: number;
-  timeSignature: "3/4" | "4/4" | "6/8";
-  instrument: InstrumentType;
+  isPlaying?: boolean;
+  isLoading?: boolean;
+  loadingStatus?: string;
+  loadingPercent?: number;
+  bpm?: number;
+  timeSignature?: "3/4" | "4/4" | "6/8";
+  instrument?: InstrumentType;
   volume?: number;
-  loop: boolean;
+  loop?: boolean;
   metronome?: boolean;
-  onPlay: () => void;
-  onPause: () => void;
-  onStop: () => void;
-  onChangeBpm: (bpm: number) => void;
-  onChangeTimeSignature: (ts: "3/4" | "4/4" | "6/8") => void;
-  onChangeInstrument: (inst: InstrumentType) => void;
+  onPlay?: () => void;
+  onPause?: () => void;
+  onStop?: () => void;
+  onChangeBpm?: (bpm: number) => void;
+  onBpmChange?: (bpm: number) => void;
+  onChangeTimeSignature?: (ts: "3/4" | "4/4" | "6/8") => void;
+  onTimeSignatureChange?: (ts: "3/4" | "4/4" | "6/8") => void;
+  onChangeInstrument?: (inst: InstrumentType) => void;
+  onInstrumentChange?: (inst: InstrumentType) => void;
   onChangeVolume?: (volume: number) => void;
-  onToggleLoop: () => void;
+  onVolumeChange?: (volume: number) => void;
+  onToggleLoop?: () => void;
+  onLoopChange?: (loop: boolean) => void;
   onToggleMetronome?: () => void;
+  onMetronomeChange?: (metronome: boolean) => void;
 }
 
 export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
-  isPlaying,
-  isLoading,
-  loadingStatus,
-  loadingPercent,
-  bpm,
-  timeSignature,
-  instrument,
+  isPlaying = false,
+  isLoading = false,
+  loadingStatus = "",
+  loadingPercent = 0,
+  bpm = 120,
+  timeSignature = "4/4",
+  instrument = "piano",
   volume = 80,
-  loop,
+  loop = false,
   metronome = false,
   onPlay,
   onPause,
   onStop,
   onChangeBpm,
+  onBpmChange,
   onChangeTimeSignature,
+  onTimeSignatureChange,
   onChangeInstrument,
+  onInstrumentChange,
   onChangeVolume,
+  onVolumeChange,
   onToggleLoop,
+  onLoopChange,
   onToggleMetronome,
+  onMetronomeChange,
 }) => {
+  const handleBpm = (val: number) => {
+    onChangeBpm?.(val);
+    onBpmChange?.(val);
+  };
+
+  const handleTimeSig = (ts: "3/4" | "4/4" | "6/8") => {
+    onChangeTimeSignature?.(ts);
+    onTimeSignatureChange?.(ts);
+  };
+
+  const handleInstrument = (inst: InstrumentType) => {
+    onChangeInstrument?.(inst);
+    onInstrumentChange?.(inst);
+  };
+
+  const handleVolume = (vol: number) => {
+    onChangeVolume?.(vol);
+    onVolumeChange?.(vol);
+  };
+
+  const handleLoop = () => {
+    onToggleLoop?.();
+    onLoopChange?.(!loop);
+  };
+
+  const handleMetronome = () => {
+    onToggleMetronome?.();
+    onMetronomeChange?.(!metronome);
+  };
+
   return (
     <div className="bg-[#1a1a24] border border-[#2d2d3d] rounded-xl p-4 shadow-xl">
       <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
@@ -76,7 +118,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
           </button>
 
           <button
-            onClick={onToggleLoop}
+            onClick={handleLoop}
             className={`p-2 rounded-lg border transition ${
               loop
                 ? "bg-[#7c5cbf]/20 border-[#7c5cbf] text-[#a88beb]"
@@ -88,7 +130,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
           </button>
 
           <button
-            onClick={onToggleMetronome}
+            onClick={handleMetronome}
             className={`px-3 py-2 rounded-lg border flex items-center gap-1.5 transition ${
               metronome
                 ? "bg-[#7c5cbf]/20 border-[#7c5cbf] text-[#a88beb]"
@@ -109,7 +151,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
             min={40}
             max={200}
             value={bpm}
-            onChange={(e) => onChangeBpm(Number(e.target.value))}
+            onChange={(e) => handleBpm(Number(e.target.value))}
             className="w-32 accent-[#7c5cbf] cursor-pointer"
           />
         </div>
@@ -119,7 +161,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
           {(["3/4", "4/4", "6/8"] as const).map((ts) => (
             <button
               key={ts}
-              onClick={() => onChangeTimeSignature(ts)}
+              onClick={() => handleTimeSig(ts)}
               className={`px-2.5 py-1 text-xs font-mono font-bold rounded transition ${
                 timeSignature === ts
                   ? "bg-[#7c5cbf] text-white"
@@ -135,7 +177,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={instrument}
-            onChange={(e) => onChangeInstrument(e.target.value as InstrumentType)}
+            onChange={(e) => handleInstrument(e.target.value as InstrumentType)}
             disabled={isLoading}
             className="px-3 py-1.5 bg-[#0f0f13] border border-[#3d3d52] rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-[#7c5cbf] cursor-pointer"
           >
@@ -147,10 +189,10 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
           </select>
 
           {/* Instrument Volume Control */}
-          {onChangeVolume && (
+          {(onChangeVolume || onVolumeChange) && (
             <div className="flex items-center gap-2 bg-[#0f0f13] px-3 py-1.5 rounded-lg border border-[#2d2d3d]">
               <button
-                onClick={() => onChangeVolume(volume === 0 ? 80 : 0)}
+                onClick={() => handleVolume(volume === 0 ? 80 : 0)}
                 className="text-gray-400 hover:text-[#a88beb] transition"
                 title={volume === 0 ? "Unmute Instrument" : "Mute Instrument"}
               >
@@ -168,7 +210,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                 min={0}
                 max={100}
                 value={volume}
-                onChange={(e) => onChangeVolume(Number(e.target.value))}
+                onChange={(e) => handleVolume(Number(e.target.value))}
                 className="w-16 sm:w-20 accent-[#7c5cbf] cursor-pointer"
                 title="Instrument Volume"
               />

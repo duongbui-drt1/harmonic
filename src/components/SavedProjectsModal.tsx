@@ -4,15 +4,19 @@ import { Folder, Save, Trash2, X, Play } from "lucide-react";
 
 interface SavedProjectsModalProps {
   isOpen: boolean;
-  currentProgression: {
+  currentProgression?: {
     chords: any[];
     key: string;
     bpm: number;
     timeSignature: string;
   };
+  currentChords?: any[];
+  bpm?: number;
+  timeSignature?: string;
+  keyName?: string;
   onClose: () => void;
   onLoadProject: (prog: Progression) => void;
-  onShowToast: (msg: string) => void;
+  onShowToast?: (msg: string) => void;
 }
 
 const STORAGE_KEY = "chord_analyzer_saved_projects_v1";
@@ -20,12 +24,23 @@ const STORAGE_KEY = "chord_analyzer_saved_projects_v1";
 export const SavedProjectsModal: React.FC<SavedProjectsModalProps> = ({
   isOpen,
   currentProgression,
+  currentChords,
+  bpm: propBpm,
+  timeSignature: propTimeSignature,
+  keyName: propKeyName,
   onClose,
   onLoadProject,
   onShowToast,
 }) => {
   const [projects, setProjects] = useState<Progression[]>([]);
   const [projectName, setProjectName] = useState("");
+
+  const activeProgression = currentProgression || {
+    chords: currentChords || [],
+    key: propKeyName || "C Major",
+    bpm: propBpm || 120,
+    timeSignature: propTimeSignature || "4/4",
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -48,24 +63,24 @@ export const SavedProjectsModal: React.FC<SavedProjectsModalProps> = ({
     e.preventDefault();
     if (!projectName.trim()) return;
 
-    if (currentProgression.chords.length === 0) {
-      onShowToast("Cannot save an empty progression!");
+    if (!activeProgression.chords || activeProgression.chords.length === 0) {
+      onShowToast?.("Cannot save an empty progression!");
       return;
     }
 
     if (projects.length >= 20) {
-      onShowToast("Maximum limit of 20 projects reached. Delete an old project first.");
+      onShowToast?.("Maximum limit of 20 projects reached. Delete an old project first.");
       return;
     }
 
     const newProject: Progression = {
       id: `proj-${Date.now()}`,
       name: projectName.trim(),
-      key: currentProgression.key,
+      key: activeProgression.key,
       mode: "major",
-      bpm: currentProgression.bpm,
-      timeSignature: currentProgression.timeSignature as any,
-      chords: currentProgression.chords,
+      bpm: activeProgression.bpm,
+      timeSignature: activeProgression.timeSignature as any,
+      chords: activeProgression.chords,
       createdAt: Date.now(),
     };
 
@@ -73,14 +88,14 @@ export const SavedProjectsModal: React.FC<SavedProjectsModalProps> = ({
     setProjects(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     setProjectName("");
-    onShowToast(`Saved project "${newProject.name}"!`);
+    onShowToast?.(`Saved project "${newProject.name}"!`);
   };
 
   const handleDelete = (id: string, name: string) => {
     const updated = projects.filter((p) => p.id !== id);
     setProjects(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    onShowToast(`Deleted project "${name}".`);
+    onShowToast?.(`Deleted project "${name}".`);
   };
 
   if (!isOpen) return null;
@@ -116,7 +131,7 @@ export const SavedProjectsModal: React.FC<SavedProjectsModalProps> = ({
           />
           <button
             type="submit"
-            disabled={!projectName.trim() || currentProgression.chords.length === 0}
+            disabled={!projectName.trim() || !activeProgression.chords || activeProgression.chords.length === 0}
             className="px-4 py-2 bg-[#7c5cbf] hover:bg-[#8e6fd1] text-white text-xs font-bold uppercase tracking-wider rounded flex items-center gap-1.5 shadow-md disabled:opacity-40 transition"
           >
             <Save className="w-4 h-4" /> Save

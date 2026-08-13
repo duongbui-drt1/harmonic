@@ -4,18 +4,29 @@ import { parseChordName, getChordNotes } from "../utils/chordData";
 import { Sparkles, Loader2, Play, Activity, Music, Tag, Compass, FileText } from "lucide-react";
 
 interface AIAssistantProps {
-  currentChords: ChordItem[];
-  currentKey: string;
-  currentBpm: number;
-  onLoadAIGenerated: (chords: ChordItem[], key: string, explanation: string) => void;
+  currentChords?: ChordItem[];
+  chords?: ChordItem[];
+  currentKey?: string;
+  keyName?: string;
+  currentBpm?: number;
+  bpm?: number;
+  onLoadAIGenerated?: (chords: ChordItem[], key: string, explanation: string) => void;
+  onApplySuggestion?: (chords: ChordItem[], key?: string, explanation?: string) => void;
 }
 
 export const AIAssistant: React.FC<AIAssistantProps> = ({
   currentChords,
+  chords,
   currentKey,
+  keyName,
   currentBpm,
+  bpm,
   onLoadAIGenerated,
+  onApplySuggestion,
 }) => {
+  const activeChords = chords || currentChords || [];
+  const activeKey = keyName || currentKey || "C Major";
+  const activeBpm = bpm || currentBpm || 120;
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -54,7 +65,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   };
 
   const handleAnalyze = async () => {
-    if (currentChords.length === 0) {
+    if (activeChords.length === 0) {
       setErrorMsg("Timeline is empty. Please add some chords before analyzing.");
       return;
     }
@@ -67,9 +78,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          progression: currentChords.map((c) => ({ name: c.name, beats: c.beats })),
-          key: currentKey,
-          bpm: currentBpm,
+          progression: activeChords.map((c) => ({ name: c.name, beats: c.beats })),
+          key: activeKey,
+          bpm: activeBpm,
         }),
       });
 
@@ -108,7 +119,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       };
     });
 
-    onLoadAIGenerated(chordsToLoad, generationResult.key, generationResult.explanation);
+    if (onApplySuggestion) {
+      onApplySuggestion(chordsToLoad, generationResult.key, generationResult.explanation);
+    } else if (onLoadAIGenerated) {
+      onLoadAIGenerated(chordsToLoad, generationResult.key, generationResult.explanation);
+    }
   };
 
   return (
@@ -134,7 +149,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
         <button
           onClick={handleAnalyze}
-          disabled={isAnalyzing || currentChords.length === 0}
+          disabled={isAnalyzing || activeChords.length === 0}
           aria-label="Phân tích lý thuyết vòng hợp âm hiện tại bằng Google Gemini AI"
           className="px-3.5 py-2 bg-[#252533] hover:bg-[#323245] text-[#a88beb] border border-[#3d3d52] text-xs font-bold uppercase rounded-lg flex items-center gap-2 disabled:opacity-40 transition shadow-sm"
         >

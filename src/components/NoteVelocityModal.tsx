@@ -8,8 +8,8 @@ interface NoteVelocityModalProps {
   chord: ChordItem | null;
   onClose: () => void;
   onSave: (updatedChord: ChordItem) => void;
-  onPlayPreview: (chord: ChordItem) => void;
-  onPlayNote: (midi: number) => void;
+  onPlayPreview?: (chord: ChordItem) => void;
+  onPlayNote?: (midi: number) => void;
 }
 
 export const NoteVelocityModal: React.FC<NoteVelocityModalProps> = ({
@@ -70,7 +70,7 @@ export const NoteVelocityModal: React.FC<NoteVelocityModalProps> = ({
 
   const handlePreviewCurrent = () => {
     const updated = buildUpdatedChord();
-    onPlayPreview(updated);
+    onPlayPreview?.(updated);
   };
 
   return (
@@ -213,7 +213,7 @@ export const NoteVelocityModal: React.FC<NoteVelocityModalProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => onPlayNote(midi)}
+                        onClick={() => onPlayNote?.(midi)}
                         className="px-2 py-1 bg-[#7c5cbf]/20 hover:bg-[#7c5cbf] text-[#a88beb] hover:text-white text-xs font-mono font-bold rounded flex items-center gap-1 transition"
                         title="Nghe thử nốt đơn này"
                       >

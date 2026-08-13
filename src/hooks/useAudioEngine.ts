@@ -323,7 +323,7 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
 
   // Play progression
   const play = useCallback(async () => {
-    if (chordsRef.current.length === 0) return;
+    if (!chordsRef.current || chordsRef.current.length === 0) return;
 
     if (Tone.getContext().state !== "running") {
       await Tone.start();

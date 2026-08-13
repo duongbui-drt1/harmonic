@@ -34,7 +34,7 @@ interface ProgressionTimelineProps {
 }
 
 export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
-  chords,
+  chords = [],
   detectedKey,
   customKey = null,
   onSetCustomKey,
@@ -141,6 +141,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
   };
 
   const totalBeats = chords.reduce((sum, c) => sum + c.beats, 0);
+  const safeKey = detectedKey || { key: "C", root: "C", mode: "major", displayName: "C Major" };
 
   return (
     <div className="bg-[#1a1a24] border border-[#2d2d3d] rounded-xl p-5 shadow-xl">
@@ -163,7 +164,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
                 title="Click to customize main key signature"
               >
                 <Sliders className="w-3 h-3 text-[#a88beb]" />
-                <span>Key: {detectedKey.displayName}</span>
+                <span>Key: {safeKey.displayName}</span>
                 {customKey ? (
                   <span className="text-[9px] bg-[#7c5cbf] text-white px-1 py-0.2 rounded font-sans uppercase">
                     Custom
@@ -210,11 +211,11 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
                           onClick={() => {
                             onSetCustomKey?.({
                               root: r,
-                              mode: detectedKey.mode,
+                              mode: safeKey.mode,
                             });
                           }}
                           className={`py-1 text-xs font-mono font-bold rounded transition ${
-                            detectedKey.root === r
+                            safeKey.root === r
                               ? "bg-[#7c5cbf] text-white shadow-sm"
                               : "bg-[#252533] text-gray-300 hover:bg-[#323245]"
                           }`}
@@ -236,12 +237,12 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
                           key={m}
                           onClick={() => {
                             onSetCustomKey?.({
-                              root: detectedKey.root,
+                              root: safeKey.root,
                               mode: m,
                             });
                           }}
                           className={`py-1 text-xs font-mono font-bold uppercase rounded transition ${
-                            detectedKey.mode === m
+                            safeKey.mode === m
                               ? "bg-[#7c5cbf] text-white shadow-sm"
                               : "bg-[#252533] text-gray-300 hover:bg-[#323245]"
                           }`}

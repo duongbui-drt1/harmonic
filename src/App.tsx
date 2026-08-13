@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { ChordItem, InstrumentType, Progression, AppTheme } from "./types";
+import { ChordItem, InstrumentType, Progression, PresetProgression, AppTheme } from "./types";
+import { parseChordName, getChordNotes } from "./utils/chordData";
 import { useAudioEngine } from "./hooks/useAudioEngine";
 import { useChordHistory } from "./hooks/useChordHistory";
 import { detectKeyFromChords, getRomanNumeral, KeyResult } from "./utils/keyDetection";
@@ -15,7 +16,17 @@ import { SavedProjectsModal } from "./components/SavedProjectsModal";
 import { AccessibilityModal } from "./components/AccessibilityModal";
 import { NoteVelocityModal } from "./components/NoteVelocityModal";
 import { Toast } from "./components/Toast";
-import { Music, Layers, Folder, Sparkles, BookOpen, Music2, Sun, Moon, Eye, Keyboard, CheckCircle, Save, Sliders, Volume2, ShieldAlert } from "lucide-react";
+import { Sidebar } from "./components/Sidebar";
+
+import { VoiceLeadingLab } from "./components/VoiceLeadingLab";
+import { TensionAndGraphLab } from "./components/TensionAndGraphLab";
+import { MutatorAndWhatIfLab } from "./components/MutatorAndWhatIfLab";
+import { DoctorAndModulationLab } from "./components/DoctorAndModulationLab";
+import { GenreAndStyleLab } from "./components/GenreAndStyleLab";
+import { MidiAnalyzerLab } from "./components/MidiAnalyzerLab";
+
+import { printHarmonicReport } from "./utils/reportExporter";
+import { Menu, Music, Sparkles, Folder, Printer, Eye, RotateCcw, RotateCw } from "lucide-react";
 
 export default function App() {
   // Load cached auto-save state from localStorage
@@ -36,9 +47,16 @@ export default function App() {
     redo,
     canUndo,
     canRedo,
-    pastCount,
-    futureCount,
-  } = useChordHistory(cachedData?.chords || []);
+  } = useChordHistory(
+    cachedData?.chords && cachedData.chords.length > 0
+      ? cachedData.chords
+      : [
+          { id: "c1", name: "Cmaj7", beats: 4, midiNotes: [60, 64, 67, 71] },
+          { id: "c2", name: "Am7", beats: 4, midiNotes: [57, 60, 64, 67] },
+          { id: "c3", name: "Dm7", beats: 4, midiNotes: [62, 65, 69, 72] },
+          { id: "c4", name: "G7", beats: 4, midiNotes: [55, 59, 62, 65] },
+        ]
+  );
 
   const [bpm, setBpm] = useState<number>(cachedData?.bpm ?? 90);
   const [timeSignature, setTimeSignature] = useState<"3/4" | "4/4" | "6/8">(cachedData?.timeSignature ?? "4/4");
@@ -46,6 +64,9 @@ export default function App() {
   const [volume, setVolume] = useState<number>(cachedData?.volume ?? 80);
   const [loop, setLoop] = useState<boolean>(cachedData?.loop ?? true);
   const [metronome, setMetronome] = useState<boolean>(cachedData?.metronome ?? false);
+
+  // Sidebar toggle state
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
   // Velocity modal state
   const [velocityModalChord, setVelocityModalChord] = useState<ChordItem | null>(null);
@@ -59,7 +80,19 @@ export default function App() {
   // UI Modals, Active Tabs, Theme
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
   const [isA11yModalOpen, setIsA11yModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"theory" | "notation" | "presets" | "ai">("theory");
+  const [activeTab, setActiveTab] = useState<
+    | "theory"
+    | "voice_leading"
+    | "tension_graph"
+    | "mutator_whatif"
+    | "doctor_modulation"
+    | "genre_dna"
+    | "midi_analyzer"
+    | "notation"
+    | "presets"
+    | "ai"
+  >("theory");
+
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [theme, setTheme] = useState<AppTheme>(() => {
     const saved = localStorage.getItem("harmonics_app_theme");
@@ -67,14 +100,11 @@ export default function App() {
     return "light";
   });
 
-  const handleSetTheme = (newTheme: AppTheme) => {
-    setTheme(newTheme);
-    localStorage.setItem("harmonics_app_theme", newTheme);
-    if (newTheme === "light") {
-      showToast("☀️ Đã đổi sang giao diện Sáng!");
-    } else {
-      showToast("🌙 Đã đổi sang giao diện Tối!");
-    }
+  const handleToggleTheme = () => {
+    const nextTheme = theme === "light" ? "dark" : "light";
+    setTheme(nextTheme);
+    localStorage.setItem("harmonics_app_theme", nextTheme);
+    showToast(`Đã chuyển sang giao diện ${nextTheme === "light" ? "Sáng" : "Tối"}!`);
   };
 
   // Key detection & Custom Key override
@@ -83,7 +113,7 @@ export default function App() {
     cachedData?.customKey ?? null
   );
 
-  // Auto-save effect: save progression and settings automatically to localStorage
+  // Auto-save effect
   useEffect(() => {
     const dataToSave = {
       chords,
@@ -115,7 +145,7 @@ export default function App() {
       }
     : autoDetectedKey;
 
-  // Update Roman numerals whenever chords or key change
+  // Update Roman numerals
   const chordsWithRoman = useMemo(
     () =>
       chords.map((c) => ({
@@ -135,7 +165,6 @@ export default function App() {
     play,
     pause,
     stop,
-    panic,
     playChordPreview,
     playNotePreview,
   } = useAudioEngine({
@@ -148,13 +177,13 @@ export default function App() {
     chords: chordsWithRoman,
   });
 
-  const handleSaveVelocityModal = (updatedChord: ChordItem) => {
-    setChords((prev) => prev.map((c) => (c.id === updatedChord.id ? updatedChord : c)));
-    if (selectedChordForDetails?.id === updatedChord.id) {
-      setSelectedChordForDetails(updatedChord);
+  const handlePlay = useCallback(() => {
+    if (isPlaying) {
+      pause();
+    } else {
+      play();
     }
-    showToast(`Đã cập nhật Velocity (${updatedChord.velocity ?? 80}%) & Độ ngân (${updatedChord.sustain ?? 100}%) cho ${updatedChord.name}`);
-  };
+  }, [isPlaying, pause, play]);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -163,81 +192,66 @@ export default function App() {
   const handleUndo = useCallback(() => {
     if (canUndo) {
       undo();
-      showToast("Undo: Restored previous timeline state");
+      showToast("Undo: Đã khôi phục trạng thái trước!");
     }
   }, [canUndo, undo]);
 
   const handleRedo = useCallback(() => {
     if (canRedo) {
       redo();
-      showToast("Redo: Restored timeline state");
+      showToast("Redo: Đã khôi phục trạng thái!");
     }
   }, [canRedo, redo]);
 
-  // Keyboard shortcuts: Space, Undo/Redo, Arrow navigation, BPM, A11y guide
+  // Load Preset
+  const handleSelectPreset = (preset: PresetProgression | Progression) => {
+    setChords(
+      preset.chords.map((c, idx) => {
+        const parsed = parseChordName(c.name);
+        const root = parsed ? parsed.root : "C";
+        const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
+        const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
+        return {
+          id: `preset-c-${idx}-${Date.now()}`,
+          name: c.name,
+          root,
+          quality: parsed ? parsed.qualityDef.quality : "major",
+          beats: c.beats,
+          notes: noteNames,
+          midiNotes,
+        };
+      })
+    );
+    if (preset.bpm) setBpm(preset.bpm);
+    if ("timeSignature" in preset && preset.timeSignature) setTimeSignature(preset.timeSignature);
+    if (preset.key) setCustomKey({ root: preset.key, mode: preset.mode || "major" });
+    const nameStr = "title" in preset ? preset.title : preset.name;
+    const genreStr = "genre" in preset ? preset.genre : "Diatonic";
+    showToast(`Đã tải preset: "${nameStr}" (${genreStr})`);
+  };
+
+  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
 
-      // Escape closes modals
       if (e.key === "Escape") {
         setIsSavedModalOpen(false);
         setIsA11yModalOpen(false);
+        setIsSidebarOpen(false);
       }
 
-      // Spacebar toggles playback when not focused on text inputs
       if (e.code === "Space" && !isInput) {
         e.preventDefault();
-        if (isPlaying) {
-          pause();
-        } else {
-          play();
-        }
+        if (isPlaying) pause();
+        else play();
       }
 
-      // Arrow Left / Right to cycle through timeline chords & preview
-      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !isInput && chords.length > 0) {
-        e.preventDefault();
-        const currentIdx = selectedChordForDetails
-          ? chords.findIndex((c) => c.id === selectedChordForDetails.id)
-          : 0;
-        let nextIdx = 0;
-        if (e.key === "ArrowRight") {
-          nextIdx = (currentIdx + 1) % chords.length;
-        } else {
-          nextIdx = (currentIdx - 1 + chords.length) % chords.length;
-        }
-        const targetChord = chords[nextIdx];
-        if (targetChord) {
-          setSelectedChordForDetails(targetChord);
-          playChordPreview(targetChord);
-          showToast(`Hợp âm: ${targetChord.name} (${targetChord.beats} nhịp)`);
-        }
-      }
-
-      // Arrow Up / Down to change BPM by 5
-      if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !isInput) {
-        e.preventDefault();
-        setBpm((prev) => {
-          const nextBpm = e.key === "ArrowUp" ? Math.min(240, prev + 5) : Math.max(40, prev - 5);
-          showToast(`Nhịp độ Tempo: ${nextBpm} BPM`);
-          return nextBpm;
-        });
-      }
-
-      // Shift + ? or KeyH to open Accessibility Guide
-      if (!isInput && (e.key === "?" || e.key.toLowerCase() === "h") && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        setIsA11yModalOpen((prev) => !prev);
-      }
-
-      // Undo: Ctrl+Z or Cmd+Z (without shift)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !e.shiftKey && !isInput) {
         e.preventDefault();
         handleUndo();
       }
 
-      // Redo: Ctrl+Y or Cmd+Shift+Z / Ctrl+Shift+Z
       if (
         (!isInput && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") ||
         (!isInput && (e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "z")
@@ -249,399 +263,336 @@ export default function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying, play, pause, handleUndo, handleRedo, chords, selectedChordForDetails, playChordPreview]);
-
-  // Add chord
-  const handleAddChord = (newChord: ChordItem) => {
-    if (chords.length >= 16) {
-      showToast("Maximum 16 chords allowed per progression.");
-      return;
-    }
-    const updated = [...chords, newChord];
-    setChords(updated);
-    setSelectedChordForDetails(newChord);
-    showToast(`Added chord "${newChord.name}"`);
-  };
-
-  // Delete chord
-  const handleDeleteChord = (id: string) => {
-    const updated = chords.filter((c) => c.id !== id);
-    setChords(updated);
-    if (selectedChordForDetails?.id === id) {
-      setSelectedChordForDetails(updated[0] || null);
-    }
-  };
-
-  // Update beats for a chord
-  const handleUpdateBeats = (id: string, beats: number) => {
-    setChords((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, beats } : c))
-    );
-  };
-
-  // Move chord
-  const handleMoveChord = (index: number, direction: -1 | 1) => {
-    const targetIdx = index + direction;
-    if (targetIdx < 0 || targetIdx >= chords.length) return;
-    const updated = [...chords];
-    const [moved] = updated.splice(index, 1);
-    updated.splice(targetIdx, 0, moved);
-    setChords(updated);
-  };
-
-  // Load preset
-  const handleLoadPreset = (presetChords: ChordItem[], key: string, presetBpm: number, presetInstrument?: InstrumentType) => {
-    setChords(presetChords);
-    setBpm(presetBpm);
-    if (presetInstrument) {
-      setInstrument(presetInstrument);
-    }
-    setSelectedChordForDetails(presetChords[0] || null);
-    showToast(`Đã tải preset (${presetChords.length} hợp âm, Giọng ${key}, ${presetBpm} BPM)!`);
-  };
-
-  // Load AI generated
-  const handleLoadAIGenerated = (aiChords: ChordItem[], key: string, explanation: string) => {
-    setChords(aiChords);
-    setSelectedChordForDetails(aiChords[0] || null);
-    showToast(`Đã tải vòng hợp âm AI (Giọng ${key})!`);
-  };
-
-  // Load saved project
-  const handleLoadProject = (prog: Progression) => {
-    setChords(prog.chords);
-    setBpm(prog.bpm);
-    setTimeSignature(prog.timeSignature);
-    setSelectedChordForDetails(prog.chords[0] || null);
-    showToast(`Đã mở dự án "${prog.name}"!`);
-  };
-
-  const getThemeClass = () => {
-    if (theme === "light") return "bg-slate-100 text-slate-800";
-    if (theme === "girly") return "bg-pink-50 text-pink-950";
-    return "bg-[#0f0f13] text-gray-200";
-  };
-
-  const getHeaderClass = () => {
-    if (theme === "light") return "bg-white border-slate-200 shadow-slate-200/50";
-    if (theme === "girly") return "bg-pink-100/90 border-pink-200";
-    return "bg-[#1a1a24] border-[#2d2d3d]";
-  };
+  }, [isPlaying, play, pause, handleUndo, handleRedo]);
 
   return (
-    <div className={`min-h-screen font-sans selection:bg-[#7c5cbf] selection:text-white pb-16 transition-colors duration-300 ${getThemeClass()}`}>
-      {/* Top Banner Header */}
-      <header className={`h-14 border-b sticky top-0 z-30 shadow-sm flex items-center px-4 sm:px-6 transition-colors duration-200 ${getHeaderClass()}`}>
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
-          {/* Brand Logo & Title */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-extrabold italic shadow-md shrink-0 ${
-              theme === "girly" ? "bg-pink-500 shadow-pink-300" : "bg-gradient-to-tr from-[#7c5cbf] to-indigo-500 shadow-[#7c5cbf]/20"
-            }`}>
-              {theme === "girly" ? "🌸" : "H"}
-            </div>
-            <div className="flex items-center gap-2.5">
-              <h1 className={`text-sm sm:text-base font-bold tracking-tight uppercase ${theme === "light" ? "text-slate-900" : theme === "girly" ? "text-pink-950" : "text-white"}`}>
-                HARMONICS <span className={`${theme === "girly" ? "text-pink-600" : "text-[#a88beb]"} font-mono text-xs font-semibold ml-0.5 opacity-90`}>v3.0</span>
-              </h1>
-              <span className={`hidden md:inline-block text-[11px] font-medium border-l ${
-                theme === "light" ? "border-slate-300 text-slate-500" : "border-[#3d3d52] text-gray-400"
-              } pl-2.5 py-0.5`}>
-                Phân Tích & Sáng Tác Hòa Âm
-              </span>
+    <div className={`min-h-screen ${theme === "light" ? "bg-slate-900 text-slate-100" : "bg-[#0b0b10] text-[#e0e0e8]"} font-sans antialiased selection:bg-[#7c5cbf] selection:text-white pb-12`}>
+      {/* Toast Notification */}
+      {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
+
+      {/* Sidebar Navigation Drawer */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        activeKeyName={activeKey?.displayName || "C Major"}
+        isCustomKey={!!customKey}
+        onSelectKey={(root, mode) => setCustomKey({ root, mode })}
+        onResetKey={() => setCustomKey(null)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        lastAutoSaveTime={lastAutoSaveTime}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onOpenSavedModal={() => setIsSavedModalOpen(true)}
+        onOpenA11yModal={() => setIsA11yModalOpen(true)}
+        onPrintReport={() => printHarmonicReport({ key: activeKey?.displayName || "C Major", bpm, timeSignature, chords: chordsWithRoman })}
+      />
+
+      {/* Top Header Bar */}
+      <header className="sticky top-0 z-30 bg-[#12121a]/90 backdrop-blur-md border-b border-[#2d2d3d] px-4 py-3 shadow-lg">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {/* Hamburger Button to toggle Sidebar */}
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 bg-[#252533] hover:bg-[#323245] text-white rounded-xl border border-[#3d3d52] transition shadow-md flex items-center gap-2"
+              title="Mở Sidebar trạng thái & công cụ"
+            >
+              <Menu className="w-5 h-5 text-[#a88beb]" />
+              <span className="text-xs font-bold hidden sm:inline">Menu</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7c5cbf] to-[#6366f1] flex items-center justify-center text-white font-extrabold shadow-md">
+                HX
+              </div>
+              <div>
+                <h1 className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
+                  HarmonicX <span className="text-[10px] px-1.5 py-0.5 bg-[#7c5cbf]/30 text-[#a88beb] rounded border border-[#7c5cbf]/50">Workstation</span>
+                </h1>
+              </div>
             </div>
           </div>
 
-          {/* Action Controls & Gemini Badge */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            {/* Google Gemini Badge */}
-            <span className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-950/70 border border-indigo-500/40 text-indigo-200 font-bold text-[11px] rounded-lg shadow-sm whitespace-nowrap">
-              <Sparkles className="w-3.5 h-3.5 text-yellow-300 shrink-0" />
-              <span>Powered by Google Gemini</span>
+          {/* Quick Header Bar Status & Actions */}
+          <div className="flex items-center gap-2">
+            <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 bg-[#1a1a24] border border-[#2d2d3d] text-xs font-mono font-bold text-indigo-300 rounded-lg">
+              Key: {activeKey?.displayName || "C Major"}
             </span>
 
-            {/* Auto-Save Indicator */}
-            <div
-              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold whitespace-nowrap shadow-sm transition ${
-                theme === "light"
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                  : "bg-emerald-950/40 text-emerald-300 border-emerald-500/30"
-              }`}
-              title="Đã tự động lưu tiến trình vào bộ nhớ tạm (localStorage)"
-            >
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>Auto-Save {lastAutoSaveTime ? `(${lastAutoSaveTime})` : ""}</span>
-            </div>
-
-            {/* Emergency Panic Button to clear stuck notes */}
             <button
-              onClick={() => {
-                panic();
-                showToast("🔊 Đã tắt khẩn cấp tất cả nốt nhạc!");
-              }}
-              className={`px-2.5 py-1.5 ${
-                theme === "light"
-                  ? "bg-red-50 hover:bg-red-100 text-red-800 border-red-300"
-                  : "bg-red-950/40 hover:bg-red-900/60 text-red-300 border-red-800/40"
-              } border rounded-lg text-xs font-bold flex items-center gap-1.5 transition whitespace-nowrap shadow-sm`}
-              title="Tắt khẩn cấp âm thanh nếu bị kẹt nốt (Panic)"
+              onClick={() => printHarmonicReport({ key: activeKey?.displayName || "C Major", bpm, timeSignature, chords: chordsWithRoman })}
+              className="px-3 py-1.5 bg-[#252533] hover:bg-[#323245] text-gray-200 text-xs font-bold rounded-lg flex items-center gap-1.5 border border-[#3d3d52] transition"
             >
-              <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
-              <span className="hidden xl:inline">Panic</span>
-            </button>
-
-            {/* Accessibility Modal Trigger */}
-            <button
-              onClick={() => setIsA11yModalOpen(true)}
-              className={`px-2.5 py-1.5 ${
-                theme === "light"
-                  ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300"
-                  : "bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border-emerald-500/40"
-              } border rounded-lg text-xs font-bold flex items-center gap-1.5 transition whitespace-nowrap shadow-sm`}
-              title="Hướng dẫn hỗ trợ người khuyết tật & phím tắt (Shift + ?)"
-            >
-              <Eye className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="hidden sm:inline">Hỗ Trợ Tiếp Cận</span>
-            </button>
-
-            {/* Theme Selector */}
-            <div className={`flex items-center p-0.5 rounded-lg border ${
-              theme === "light" ? "bg-slate-100 border-slate-200" : "bg-[#0f0f13] border-[#2d2d3d]"
-            }`}>
-              <button
-                onClick={() => handleSetTheme("dark")}
-                className={`px-2 py-1 text-xs font-bold rounded-md flex items-center gap-1 transition ${
-                  theme === "dark" ? "bg-[#7c5cbf] text-white shadow-sm" : "text-gray-400 hover:text-white"
-                }`}
-                title="Giao diện Tối (Studio Dark)"
-              >
-                <Moon className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Tối</span>
-              </button>
-              <button
-                onClick={() => handleSetTheme("light")}
-                className={`px-2 py-1 text-xs font-bold rounded-md flex items-center gap-1 transition ${
-                  theme === "light" ? "bg-indigo-600 text-white shadow-sm" : "text-gray-400 hover:text-white"
-                }`}
-                title="Giao diện Sáng (Clean Light)"
-              >
-                <Sun className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Sáng</span>
-              </button>
-            </div>
-
-            {/* Active Key Display */}
-            <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium whitespace-nowrap ${
-              theme === "light" ? "bg-slate-100 border-slate-200 text-slate-700" : "bg-[#0f0f13] border-[#2d2d3d] text-gray-300"
-            }`}>
-              <span>Giọng:</span>
-              <span className="text-[#7c5cbf] dark:text-[#a88beb] font-mono font-bold">{activeKey.displayName}</span>
-            </div>
-
-            {/* Presets Button */}
-            <button
-              onClick={() => setActiveTab("presets")}
-              className={`px-3 py-1.5 ${
-                theme === "light"
-                  ? "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300"
-                  : "bg-[#252533] hover:bg-[#323245] text-gray-200 border-[#3d3d52]"
-              } border rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition whitespace-nowrap shadow-sm`}
-            >
-              <Layers className="w-3.5 h-3.5 text-[#7c5cbf]" /> Presets (160)
-            </button>
-
-            {/* Projects Button */}
-            <button
-              onClick={() => setIsSavedModalOpen(true)}
-              className={`px-3.5 py-1.5 ${
-                theme === "girly" ? "bg-pink-500 hover:bg-pink-600 text-white" : "bg-[#7c5cbf] hover:bg-[#8e6fd1] text-white"
-              } rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition whitespace-nowrap shadow-sm`}
-            >
-              <Folder className="w-3.5 h-3.5" /> Dự Án
+              <Printer className="w-3.5 h-3.5 text-sky-400" /> Báo Cáo
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
-        {/* Row 1: Playback Controls */}
-        <PlaybackControls
-          isPlaying={isPlaying}
-          isLoading={isLoading}
-          loadingStatus={loadingStatus}
-          loadingPercent={loadingPercent}
-          bpm={bpm}
-          timeSignature={timeSignature}
-          instrument={instrument}
-          volume={volume}
-          loop={loop}
-          metronome={metronome}
-          onPlay={play}
-          onPause={pause}
-          onStop={stop}
-          onChangeBpm={setBpm}
-          onChangeTimeSignature={setTimeSignature}
-          onChangeInstrument={setInstrument}
-          onChangeVolume={setVolume}
-          onToggleLoop={() => setLoop(!loop)}
-          onToggleMetronome={() => setMetronome(!metronome)}
-        />
+      <main className="max-w-7xl mx-auto px-4 pt-6 space-y-6">
+        {/* Interactive Piano Keyboard */}
+        <section className="bg-[#161622] border border-[#2d2d3d] rounded-2xl p-4 shadow-2xl">
+          <PianoKeyboard
+            onPlayNote={(note) => playNotePreview(note)}
+            onAddChord={(chord) => {
+              setChords((prev) => [...prev, chord]);
+              showToast(`Đã thêm hợp âm: ${chord.name}`);
+            }}
+            onPlayChordPreview={(chord) => playChordPreview(chord)}
+          />
+        </section>
 
-        {/* Row 2: Progression Timeline */}
-        <ProgressionTimeline
-          chords={chordsWithRoman}
-          detectedKey={activeKey}
-          customKey={customKey}
-          onSetCustomKey={setCustomKey}
-          playingIndex={currentChordIndex}
-          selectedChordForDetails={selectedChordForDetails}
-          onDeleteChord={handleDeleteChord}
-          onUpdateBeats={handleUpdateBeats}
-          onMoveChord={handleMoveChord}
-          onPlayPreview={playChordPreview}
-          onSelectChordForDetails={setSelectedChordForDetails}
-          onOpenVelocityModal={(chord) => setVelocityModalChord(chord)}
-          onClearTimeline={() => {
-            setChords([]);
-            setSelectedChordForDetails(null);
-            showToast("Timeline cleared.");
-          }}
-          onSetChords={setChords}
-          onOpenPresetLibrary={() => setActiveTab("presets")}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          pastCount={pastCount}
-          futureCount={futureCount}
-        />
+        {/* Timeline & Playback Controls */}
+        <section className="space-y-4">
+          <PlaybackControls
+            isPlaying={isPlaying}
+            onPlay={play}
+            onPause={pause}
+            onStop={stop}
+            bpm={bpm}
+            onChangeBpm={setBpm}
+            onBpmChange={setBpm}
+            timeSignature={timeSignature}
+            onChangeTimeSignature={setTimeSignature}
+            onTimeSignatureChange={setTimeSignature}
+            instrument={instrument}
+            onChangeInstrument={setInstrument}
+            onInstrumentChange={setInstrument}
+            volume={volume}
+            onChangeVolume={setVolume}
+            onVolumeChange={setVolume}
+            loop={loop}
+            onToggleLoop={() => setLoop(!loop)}
+            onLoopChange={setLoop}
+            metronome={metronome}
+            onToggleMetronome={() => setMetronome(!metronome)}
+            onMetronomeChange={setMetronome}
+            isLoading={isLoading}
+            loadingStatus={loadingStatus}
+            loadingPercent={loadingPercent}
+          />
 
-        {/* Row 3: Virtual Piano Keyboard & Chord Builder */}
-        <PianoKeyboard
-          onAddChord={handleAddChord}
-          onPlayNote={playNotePreview}
-          onPlayChordPreview={playChordPreview}
-        />
+          <ProgressionTimeline
+            chords={chordsWithRoman}
+            detectedKey={activeKey}
+            customKey={customKey}
+            onSetCustomKey={setCustomKey}
+            playingIndex={currentChordIndex}
+            selectedChordForDetails={selectedChordForDetails}
+            onDeleteChord={(id) => setChords((prev) => prev.filter((c) => c.id !== id))}
+            onUpdateBeats={(id, beats) => setChords((prev) => prev.map((c) => (c.id === id ? { ...c, beats } : c)))}
+            onMoveChord={(index, direction) => {
+              const target = index + direction;
+              if (target < 0 || target >= chords.length) return;
+              const next = [...chords];
+              const [moved] = next.splice(index, 1);
+              next.splice(target, 0, moved);
+              setChords(next);
+            }}
+            onPlayPreview={playChordPreview}
+            onSelectChordForDetails={(chord) => setSelectedChordForDetails(chord)}
+            onOpenVelocityModal={(chord) => setVelocityModalChord(chord)}
+            onClearTimeline={() => setChords([])}
+            onSetChords={setChords}
+            onOpenPresetLibrary={() => setActiveTab("presets")}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+          />
+        </section>
 
-        {/* Row 4: Secondary Modules Tab Switcher */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-[#2d2d3d] pb-2 overflow-x-auto scrollbar-thin">
-            <button
-              onClick={() => setActiveTab("theory")}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-2 transition ${
-                activeTab === "theory"
-                  ? "bg-[#7c5cbf] text-white shadow-md shadow-[#7c5cbf]/20"
-                  : "bg-[#1a1a24] text-gray-400 hover:text-white border border-[#2d2d3d]"
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" /> Lý Thuyết & Thế Tay Guitar
-            </button>
-
-            <button
-              onClick={() => setActiveTab("notation")}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-2 transition ${
-                activeTab === "notation"
-                  ? "bg-[#7c5cbf] text-white shadow-md shadow-[#7c5cbf]/20"
-                  : "bg-[#1a1a24] text-gray-400 hover:text-white border border-[#2d2d3d]"
-              }`}
-            >
-              <Music2 className="w-3.5 h-3.5" /> Ký Âm Phổ Nhạc
-            </button>
-
-            <button
-              onClick={() => setActiveTab("presets")}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-2 transition ${
-                activeTab === "presets"
-                  ? "bg-[#7c5cbf] text-white shadow-md shadow-[#7c5cbf]/20"
-                  : "bg-[#1a1a24] text-gray-400 hover:text-white border border-[#2d2d3d]"
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" /> Thư Viện Presets (160)
-            </button>
-
-            <button
-              onClick={() => setActiveTab("ai")}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-2 transition ${
-                activeTab === "ai"
-                  ? "bg-[#7c5cbf] text-white shadow-md shadow-[#7c5cbf]/20"
-                  : "bg-[#1a1a24] text-gray-400 hover:text-white border border-[#2d2d3d]"
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" /> Trợ Lý Trí Tuệ Nhân Tạo AI
-            </button>
-          </div>
-
-          {/* Active Tab Content */}
+        {/* Module Content Area */}
+        <section className="space-y-6">
           {activeTab === "theory" && (
             <ChordTheoryPanel
               chords={chordsWithRoman}
-              selectedChord={selectedChordForDetails}
-              activeKey={activeKey.displayName}
-              onSelectChord={setSelectedChordForDetails}
-              onPlayPreview={playChordPreview}
-              onPlaySequence={play}
+              selectedChord={selectedChordForDetails || chordsWithRoman[0] || null}
+              activeKey={activeKey?.displayName || "C Major"}
+              onSelectChord={(chord) => setSelectedChordForDetails(chord)}
+              onPlayPreview={(chord) => playChordPreview(chord)}
+              onPlaySequence={handlePlay}
+            />
+          )}
+
+          {activeTab === "voice_leading" && (
+            <VoiceLeadingLab chords={chordsWithRoman} onPlayPreview={playChordPreview} />
+          )}
+
+          {activeTab === "tension_graph" && (
+            <TensionAndGraphLab chords={chordsWithRoman} keyName={activeKey?.displayName || "C Major"} />
+          )}
+
+          {activeTab === "mutator_whatif" && (
+            <MutatorAndWhatIfLab
+              chords={chordsWithRoman}
+              keyName={activeKey?.displayName || "C Major"}
+              onApplyMutation={(newChords) => {
+                setChords(
+                  newChords.map((c, idx) => {
+                    const parsed = parseChordName(c.name);
+                    const root = parsed ? parsed.root : "C";
+                    const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
+                    const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
+                    return {
+                      id: `mutated-${idx}-${Date.now()}`,
+                      name: c.name,
+                      root,
+                      quality: parsed ? parsed.qualityDef.quality : "major",
+                      beats: c.beats || 4,
+                      notes: noteNames,
+                      midiNotes,
+                    };
+                  })
+                );
+                showToast("Đã áp dụng biến thể hòa âm mới!");
+              }}
+            />
+          )}
+
+          {activeTab === "doctor_modulation" && (
+            <DoctorAndModulationLab chords={chordsWithRoman} keyName={activeKey?.displayName || "C Major"} />
+          )}
+
+          {activeTab === "genre_dna" && (
+            <GenreAndStyleLab
+              chords={chordsWithRoman}
+              keyName={activeKey?.displayName || "C Major"}
+              onApplyMakeItMore={(newChords) => {
+                setChords(
+                  newChords.map((c, idx) => {
+                    const parsed = parseChordName(c.name);
+                    const root = parsed ? parsed.root : "C";
+                    const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
+                    const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
+                    return {
+                      id: `genre-${idx}-${Date.now()}`,
+                      name: c.name,
+                      root,
+                      quality: parsed ? parsed.qualityDef.quality : "major",
+                      beats: c.beats || 4,
+                      notes: noteNames,
+                      midiNotes,
+                    };
+                  })
+                );
+                showToast("Đã áp dụng chuyển đổi cảm xúc hợp âm!");
+              }}
+            />
+          )}
+
+          {activeTab === "midi_analyzer" && (
+            <MidiAnalyzerLab
+              onImportMidiChords={(importedChords, midiBpm) => {
+                setChords(
+                  importedChords.map((c, idx) => {
+                    const parsed = parseChordName(c.name);
+                    const root = parsed ? parsed.root : "C";
+                    const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
+                    const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
+                    return {
+                      id: `midi-${idx}-${Date.now()}`,
+                      name: c.name,
+                      root,
+                      quality: parsed ? parsed.qualityDef.quality : "major",
+                      beats: c.beats || 4,
+                      notes: noteNames,
+                      midiNotes,
+                    };
+                  })
+                );
+                setBpm(midiBpm);
+                showToast(`Đã nhập thành công ${importedChords.length} hợp âm từ MIDI!`);
+              }}
             />
           )}
 
           {activeTab === "notation" && (
-            <SheetNotation chords={chordsWithRoman} keyName={activeKey.displayName} bpm={bpm} />
+            <SheetNotation chords={chordsWithRoman} keyName={activeKey?.displayName || "C Major"} bpm={bpm} />
           )}
 
-          {activeTab === "presets" && (
-            <PresetLibrary onLoadPreset={handleLoadPreset} />
-          )}
+          {activeTab === "presets" && <PresetLibrary onSelectPreset={handleSelectPreset} />}
 
           {activeTab === "ai" && (
             <AIAssistant
-              currentChords={chordsWithRoman}
-              currentKey={activeKey.displayName}
-              currentBpm={bpm}
-              onLoadAIGenerated={handleLoadAIGenerated}
+              chords={chordsWithRoman}
+              keyName={activeKey?.displayName || "C Major"}
+              bpm={bpm}
+              onApplySuggestion={(suggestedChords) => {
+                setChords(
+                  suggestedChords.map((c, idx) => {
+                    const parsed = parseChordName(c.name);
+                    const root = parsed ? parsed.root : "C";
+                    const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
+                    const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
+                    return {
+                      id: `ai-${idx}-${Date.now()}`,
+                      name: c.name,
+                      root,
+                      quality: parsed ? parsed.qualityDef.quality : "major",
+                      beats: c.beats || 4,
+                      notes: noteNames,
+                      midiNotes,
+                    };
+                  })
+                );
+                showToast("Đã áp dụng gợi ý từ AI Co-Pilot!");
+              }}
             />
           )}
-        </div>
 
-        {/* Row 5: Export & Share Options */}
-        <ExportPanel
-          chords={chordsWithRoman}
-          detectedKey={activeKey}
-          bpm={bpm}
-          instrument={instrument}
-          onShowToast={showToast}
-        />
+          {/* Export Panel */}
+          <ExportPanel
+            chords={chordsWithRoman}
+            bpm={bpm}
+            timeSignature={timeSignature}
+            keyName={activeKey?.displayName || "C Major"}
+            detectedKey={activeKey}
+            onShowToast={showToast}
+          />
+        </section>
       </main>
 
-      {/* Saved Projects Modal */}
-      <SavedProjectsModal
-        isOpen={isSavedModalOpen}
-        currentProgression={{
-          chords: chordsWithRoman,
-          key: activeKey.displayName,
-          bpm,
-          timeSignature,
-        }}
-        onClose={() => setIsSavedModalOpen(false)}
-        onLoadProject={handleLoadProject}
-        onShowToast={showToast}
-      />
+      {/* Modals */}
+      {isSavedModalOpen && (
+        <SavedProjectsModal
+          isOpen={isSavedModalOpen}
+          onClose={() => setIsSavedModalOpen(false)}
+          currentChords={chordsWithRoman}
+          bpm={bpm}
+          timeSignature={timeSignature}
+          keyName={activeKey?.displayName || "C Major"}
+          onLoadProject={(proj) => {
+            setChords(proj.chords);
+            setBpm(proj.bpm);
+            setTimeSignature(proj.timeSignature);
+            showToast(`Đã mở dự án: "${proj.name}"`);
+          }}
+          onShowToast={showToast}
+        />
+      )}
 
-      {/* Accessibility & Shortcuts Modal */}
-      <AccessibilityModal
-        isOpen={isA11yModalOpen}
-        onClose={() => setIsA11yModalOpen(false)}
-      />
+      {isA11yModalOpen && <AccessibilityModal isOpen={isA11yModalOpen} onClose={() => setIsA11yModalOpen(false)} />}
 
-      {/* Note & Chord Velocity / Sustain Customization Modal */}
-      <NoteVelocityModal
-        isOpen={!!velocityModalChord}
-        chord={velocityModalChord}
-        onClose={() => setVelocityModalChord(null)}
-        onSave={handleSaveVelocityModal}
-        onPlayPreview={playChordPreview}
-        onPlayNote={playNotePreview}
-      />
-
-      {/* Toast Notification */}
-      <Toast message={toastMsg} onClose={() => setToastMsg(null)} />
+      {velocityModalChord && (
+        <NoteVelocityModal
+          isOpen={!!velocityModalChord}
+          onClose={() => setVelocityModalChord(null)}
+          chord={velocityModalChord}
+          onPlayPreview={(chord) => playChordPreview(chord)}
+          onPlayNote={(midi) => playNotePreview(midi)}
+          onSave={(updated) => {
+            setChords((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+            showToast(`Đã lưu Velocity & Sustain cho ${updated.name}`);
+          }}
+        />
+      )}
     </div>
   );
 }

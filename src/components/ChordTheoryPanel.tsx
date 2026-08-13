@@ -17,11 +17,11 @@ import {
 } from "lucide-react";
 
 interface ChordTheoryPanelProps {
-  chords: ChordItem[];
-  selectedChord: ChordItem | null;
-  activeKey: string;
-  onSelectChord: (chord: ChordItem) => void;
-  onPlayPreview: (chord: ChordItem) => void;
+  chords?: ChordItem[];
+  selectedChord?: ChordItem | null;
+  activeKey?: string;
+  onSelectChord?: (chord: ChordItem) => void;
+  onPlayPreview?: (chord: ChordItem) => void;
   onPlaySequence?: () => void;
 }
 
@@ -120,9 +120,9 @@ function detectProgressionPattern(romanList: string[]): PatternInfo | null {
 }
 
 export const ChordTheoryPanel: React.FC<ChordTheoryPanelProps> = ({
-  chords,
-  selectedChord,
-  activeKey,
+  chords = [],
+  selectedChord = null,
+  activeKey = "C Major",
   onSelectChord,
   onPlayPreview,
   onPlaySequence,

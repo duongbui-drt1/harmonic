@@ -6,14 +6,17 @@ import { ChordItem } from "../types";
 import { Plus, Volume2, Trash2, Music } from "lucide-react";
 
 interface PianoKeyboardProps {
-  onAddChord: (chord: ChordItem) => void;
-  onPlayNote: (midi: number) => void;
-  onPlayChordPreview: (chord: ChordItem) => void;
+  onAddChord?: (chord: ChordItem) => void;
+  onPlayNote?: (midi: number) => void;
+  onNotePlay?: (midi: number) => void;
+  onPlayChordPreview?: (chord: ChordItem) => void;
+  onChordRecognized?: (candidate: any) => void;
 }
 
 export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   onAddChord,
   onPlayNote,
+  onNotePlay,
   onPlayChordPreview,
 }) => {
   const [selectedMidis, setSelectedMidis] = useState<number[]>([]);
@@ -26,7 +29,11 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   const detected = detectChordFromMidiNotes(selectedMidis);
 
   const toggleKey = (midi: number) => {
-    onPlayNote(midi);
+    if (onPlayNote) {
+      onPlayNote(midi);
+    } else if (onNotePlay) {
+      onNotePlay(midi);
+    }
     setSelectedMidis((prev) =>
       prev.includes(midi) ? prev.filter((m) => m !== midi) : [...prev, midi].sort((a, b) => a - b)
     );
@@ -49,7 +56,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       notes: noteNames,
       midiNotes: [...selectedMidis],
     };
-    onAddChord(chordItem);
+    onAddChord?.(chordItem);
   };
 
   const handleManualAdd = (e: React.FormEvent) => {
@@ -74,8 +81,8 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       midiNotes: midiNotes,
     };
 
-    onAddChord(chordItem);
-    onPlayChordPreview(chordItem);
+    onAddChord?.(chordItem);
+    onPlayChordPreview?.(chordItem);
     setManualInput("");
   };
 
@@ -102,7 +109,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
             <button
               onClick={() => {
                 const noteNames = selectedMidis.map((m) => midiToNoteName(m));
-                onPlayChordPreview({
+                onPlayChordPreview?.({
                   id: "preview",
                   name: detected.name,
                   root: detected.root,
