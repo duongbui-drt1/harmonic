@@ -12,8 +12,9 @@ import { AIAssistant } from "./components/AIAssistant";
 import { ExportPanel } from "./components/ExportPanel";
 import { SheetNotation } from "./components/SheetNotation";
 import { SavedProjectsModal } from "./components/SavedProjectsModal";
+import { AccessibilityModal } from "./components/AccessibilityModal";
 import { Toast } from "./components/Toast";
-import { Music, Layers, Folder, Sparkles, BookOpen, Music2, Sun, Moon } from "lucide-react";
+import { Music, Layers, Folder, Sparkles, BookOpen, Music2, Sun, Moon, Eye, Keyboard } from "lucide-react";
 
 export default function App() {
   // App state with Undo/Redo history stack
@@ -40,6 +41,7 @@ export default function App() {
 
   // UI Modals, Active Tabs, Theme
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
+  const [isA11yModalOpen, setIsA11yModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"theory" | "notation" | "presets" | "ai">("theory");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [theme, setTheme] = useState<AppTheme>(() => {
@@ -121,10 +123,16 @@ export default function App() {
     }
   }, [canRedo, redo]);
 
-  // Spacebar play/pause & Ctrl+Z / Ctrl+Y Undo/Redo keyboard shortcuts
+  // Keyboard shortcuts: Space, Undo/Redo, Arrow navigation, BPM, A11y guide
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+
+      // Escape closes modals
+      if (e.key === "Escape") {
+        setIsSavedModalOpen(false);
+        setIsA11yModalOpen(false);
+      }
 
       // Spacebar toggles playback when not focused on text inputs
       if (e.code === "Space" && !isInput) {
@@ -134,6 +142,42 @@ export default function App() {
         } else {
           play();
         }
+      }
+
+      // Arrow Left / Right to cycle through timeline chords & preview
+      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !isInput && chords.length > 0) {
+        e.preventDefault();
+        const currentIdx = selectedChordForDetails
+          ? chords.findIndex((c) => c.id === selectedChordForDetails.id)
+          : 0;
+        let nextIdx = 0;
+        if (e.key === "ArrowRight") {
+          nextIdx = (currentIdx + 1) % chords.length;
+        } else {
+          nextIdx = (currentIdx - 1 + chords.length) % chords.length;
+        }
+        const targetChord = chords[nextIdx];
+        if (targetChord) {
+          setSelectedChordForDetails(targetChord);
+          playChordPreview(targetChord);
+          showToast(`Hợp âm: ${targetChord.name} (${targetChord.beats} nhịp)`);
+        }
+      }
+
+      // Arrow Up / Down to change BPM by 5
+      if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !isInput) {
+        e.preventDefault();
+        setBpm((prev) => {
+          const nextBpm = e.key === "ArrowUp" ? Math.min(240, prev + 5) : Math.max(40, prev - 5);
+          showToast(`Nhịp độ Tempo: ${nextBpm} BPM`);
+          return nextBpm;
+        });
+      }
+
+      // Shift + ? or KeyH to open Accessibility Guide
+      if (!isInput && (e.key === "?" || e.key.toLowerCase() === "h") && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setIsA11yModalOpen((prev) => !prev);
       }
 
       // Undo: Ctrl+Z or Cmd+Z (without shift)
@@ -154,7 +198,7 @@ export default function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying, play, pause, handleUndo, handleRedo]);
+  }, [isPlaying, play, pause, handleUndo, handleRedo, chords, selectedChordForDetails, playChordPreview]);
 
   // Add chord
   const handleAddChord = (newChord: ChordItem) => {
@@ -236,31 +280,57 @@ export default function App() {
   return (
     <div className={`min-h-screen font-sans selection:bg-[#7c5cbf] selection:text-white pb-16 transition-colors duration-300 ${getThemeClass()}`}>
       {/* Top Banner Header */}
-      <header className={`h-14 border-b sticky top-0 z-30 shadow-md flex items-center px-4 sm:px-6 transition-colors duration-300 ${getHeaderClass()}`}>
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded flex items-center justify-center text-white font-bold italic shadow-md ${
-              theme === "girly" ? "bg-pink-500 shadow-pink-300" : "bg-[#7c5cbf] shadow-[#7c5cbf]/20"
+      <header className={`h-14 border-b sticky top-0 z-30 shadow-sm flex items-center px-4 sm:px-6 transition-colors duration-200 ${getHeaderClass()}`}>
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
+          {/* Brand Logo & Title */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-extrabold italic shadow-md shrink-0 ${
+              theme === "girly" ? "bg-pink-500 shadow-pink-300" : "bg-gradient-to-tr from-[#7c5cbf] to-indigo-500 shadow-[#7c5cbf]/20"
             }`}>
               {theme === "girly" ? "🌸" : "H"}
             </div>
-            <div className="flex items-center gap-2">
-              <h1 className={`text-sm sm:text-base font-semibold tracking-tight uppercase ${theme === "light" ? "text-slate-900" : theme === "girly" ? "text-pink-950" : "text-white"}`}>
-                HARMONICS <span className={`${theme === "girly" ? "text-pink-600" : "text-[#7c5cbf]"} font-mono text-xs font-normal ml-1`}>v3.0</span>
+            <div className="flex items-center gap-2.5">
+              <h1 className={`text-sm sm:text-base font-bold tracking-tight uppercase ${theme === "light" ? "text-slate-900" : theme === "girly" ? "text-pink-950" : "text-white"}`}>
+                HARMONICS <span className={`${theme === "girly" ? "text-pink-600" : "text-[#a88beb]"} font-mono text-xs font-semibold ml-0.5 opacity-90`}>v3.0</span>
               </h1>
-              <span className="hidden md:inline-block text-[11px] text-gray-500 border-l border-gray-300 dark:border-[#2d2d3d] pl-3 py-0.5">
-                Phân Tích & Sáng Tác Hòa Âm (Chord Studio)
+              <span className={`hidden md:inline-block text-[11px] font-medium border-l ${
+                theme === "light" ? "border-slate-300 text-slate-500" : "border-[#3d3d52] text-gray-400"
+              } pl-2.5 py-0.5`}>
+                Phân Tích & Sáng Tác Hòa Âm
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            {/* Theme Selector (Nền Hồng tạm ẩn) */}
-            <div className="flex items-center gap-1 bg-black/10 dark:bg-black/20 p-1 rounded-lg border border-black/10 dark:border-white/10">
+          {/* Action Controls & Gemini Badge */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Google Gemini Badge */}
+            <span className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-950/70 border border-indigo-500/40 text-indigo-200 font-bold text-[11px] rounded-lg shadow-sm whitespace-nowrap">
+              <Sparkles className="w-3.5 h-3.5 text-yellow-300 shrink-0" />
+              <span>Powered by Google Gemini</span>
+            </span>
+
+            {/* Accessibility Modal Trigger */}
+            <button
+              onClick={() => setIsA11yModalOpen(true)}
+              className={`px-2.5 py-1.5 ${
+                theme === "light"
+                  ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300"
+                  : "bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border-emerald-500/40"
+              } border rounded-lg text-xs font-bold flex items-center gap-1.5 transition whitespace-nowrap shadow-sm`}
+              title="Hướng dẫn hỗ trợ người khuyết tật & phím tắt (Shift + ?)"
+            >
+              <Eye className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="hidden sm:inline">Hỗ Trợ Tiếp Cận</span>
+            </button>
+
+            {/* Theme Selector */}
+            <div className={`flex items-center p-0.5 rounded-lg border ${
+              theme === "light" ? "bg-slate-100 border-slate-200" : "bg-[#0f0f13] border-[#2d2d3d]"
+            }`}>
               <button
                 onClick={() => handleSetTheme("dark")}
-                className={`px-2.5 py-1 text-xs font-bold rounded flex items-center gap-1 transition ${
-                  theme === "dark" ? "bg-[#7c5cbf] text-white shadow-sm" : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                className={`px-2 py-1 text-xs font-bold rounded-md flex items-center gap-1 transition ${
+                  theme === "dark" ? "bg-[#7c5cbf] text-white shadow-sm" : "text-gray-400 hover:text-white"
                 }`}
                 title="Giao diện Tối (Studio Dark)"
               >
@@ -268,8 +338,8 @@ export default function App() {
               </button>
               <button
                 onClick={() => handleSetTheme("light")}
-                className={`px-2.5 py-1 text-xs font-bold rounded flex items-center gap-1 transition ${
-                  theme === "light" ? "bg-indigo-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                className={`px-2 py-1 text-xs font-bold rounded-md flex items-center gap-1 transition ${
+                  theme === "light" ? "bg-indigo-600 text-white shadow-sm" : "text-gray-400 hover:text-white"
                 }`}
                 title="Giao diện Sáng (Clean Light)"
               >
@@ -277,18 +347,32 @@ export default function App() {
               </button>
             </div>
 
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-black/5 dark:bg-black/20 border border-black/10 dark:border-white/10 rounded text-xs text-gray-600 dark:text-gray-400">
-              Giọng: <span className="text-[#7c5cbf] dark:text-[#a88beb] font-mono font-bold">{activeKey.displayName}</span>
+            {/* Active Key Display */}
+            <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium whitespace-nowrap ${
+              theme === "light" ? "bg-slate-100 border-slate-200 text-slate-700" : "bg-[#0f0f13] border-[#2d2d3d] text-gray-300"
+            }`}>
+              <span>Giọng:</span>
+              <span className="text-[#7c5cbf] dark:text-[#a88beb] font-mono font-bold">{activeKey.displayName}</span>
             </div>
+
+            {/* Presets Button */}
             <button
               onClick={() => setActiveTab("presets")}
-              className="px-3 py-1.5 bg-slate-200 dark:bg-[#252533] hover:bg-slate-300 dark:hover:bg-[#323245] text-slate-800 dark:text-gray-200 border border-slate-300 dark:border-[#3d3d52] rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition"
+              className={`px-3 py-1.5 ${
+                theme === "light"
+                  ? "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300"
+                  : "bg-[#252533] hover:bg-[#323245] text-gray-200 border-[#3d3d52]"
+              } border rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition whitespace-nowrap shadow-sm`}
             >
               <Layers className="w-3.5 h-3.5 text-[#7c5cbf]" /> Presets (160)
             </button>
+
+            {/* Projects Button */}
             <button
               onClick={() => setIsSavedModalOpen(true)}
-              className="px-3.5 py-1.5 bg-[#7c5cbf] hover:bg-[#8e6fd1] text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition"
+              className={`px-3.5 py-1.5 ${
+                theme === "girly" ? "bg-pink-500 hover:bg-pink-600 text-white" : "bg-[#7c5cbf] hover:bg-[#8e6fd1] text-white"
+              } rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition whitespace-nowrap shadow-sm`}
             >
               <Folder className="w-3.5 h-3.5" /> Dự Án
             </button>
@@ -407,8 +491,12 @@ export default function App() {
           {/* Active Tab Content */}
           {activeTab === "theory" && (
             <ChordTheoryPanel
-              chord={selectedChordForDetails}
+              chords={chordsWithRoman}
+              selectedChord={selectedChordForDetails}
+              activeKey={activeKey.displayName}
+              onSelectChord={setSelectedChordForDetails}
               onPlayPreview={playChordPreview}
+              onPlaySequence={play}
             />
           )}
 
@@ -452,6 +540,12 @@ export default function App() {
         onClose={() => setIsSavedModalOpen(false)}
         onLoadProject={handleLoadProject}
         onShowToast={showToast}
+      />
+
+      {/* Accessibility & Shortcuts Modal */}
+      <AccessibilityModal
+        isOpen={isA11yModalOpen}
+        onClose={() => setIsA11yModalOpen(false)}
       />
 
       {/* Toast Notification */}

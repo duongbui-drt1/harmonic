@@ -114,58 +114,67 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   return (
     <div className="bg-[#1a1a24] border border-[#2d2d3d] rounded-xl p-5 shadow-xl space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-[#2d2d3d]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#2d2d3d]">
         <div>
-          <label className="text-[10px] font-bold text-[#7c5cbf] uppercase tracking-widest block mb-1">
-            AI Assistant & Analyzer
-          </label>
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span className="text-[10px] font-bold text-[#7c5cbf] uppercase tracking-widest block">
+              Trợ Lý Trí Tuệ Nhân Tạo
+            </span>
+            <span className="px-2.5 py-0.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-extrabold text-[10px] rounded-full flex items-center gap-1 shadow-sm">
+              <Sparkles className="w-3 h-3 text-yellow-300 animate-pulse" /> Powered by Google Gemini
+            </span>
+          </div>
           <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            AI Music Composer
+            AI Phân Tích & Sáng Tác Hòa Âm
           </h2>
-          <p className="text-xs text-gray-400">
-            Describe a mood, style, or story to compose a custom progression, or analyze your current timeline.
+          <p className="text-xs text-gray-400 mt-0.5">
+            Mô tả tâm trạng, thể loại hoặc câu chuyện để AI tự động sáng tác vòng hợp âm phù hợp, hoặc phân tích lý thuyết vòng hợp âm hiện tại.
           </p>
         </div>
 
         <button
           onClick={handleAnalyze}
           disabled={isAnalyzing || currentChords.length === 0}
-          className="px-3.5 py-1.5 bg-[#252533] hover:bg-[#323245] text-[#a88beb] border border-[#3d3d52] text-xs font-bold uppercase rounded flex items-center gap-2 disabled:opacity-40 transition"
+          aria-label="Phân tích lý thuyết vòng hợp âm hiện tại bằng Google Gemini AI"
+          className="px-3.5 py-2 bg-[#252533] hover:bg-[#323245] text-[#a88beb] border border-[#3d3d52] text-xs font-bold uppercase rounded-lg flex items-center gap-2 disabled:opacity-40 transition shadow-sm"
         >
           {isAnalyzing ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <Activity className="w-4 h-4" />
           )}
-          Analyze My Progression
+          Phân Tích Vòng Hiện Tại
         </button>
       </div>
 
       {/* AI Prompt Input Form */}
-      <form onSubmit={handleGenerate} className="space-y-3">
-        <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
-          Describe what you want to compose:
+      <form onSubmit={handleGenerate} className="space-y-3" role="search" aria-label="Khung nhập mô tả sáng tác AI">
+        <label htmlFor="ai-prompt-input" className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
+          Mô tả ý tưởng bài hát / tâm trạng bạn muốn tạo:
         </label>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <input
+            id="ai-prompt-input"
             type="text"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder='e.g., "a sad rainy night progression", "upbeat J-pop chorus", "jazz turnaround in Dm"...'
-            className="flex-1 px-3.5 py-2 bg-[#0f0f13] border border-[#3d3d52] rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#7c5cbf]"
+            aria-label="Mô tả ý tưởng âm nhạc cho AI"
+            placeholder='Ví dụ: "Vòng hòa âm mưa buồn đêm khuya C Cải lương", "Điệp khúc J-pop sôi động", "Chachacha sôi động A minor"...'
+            className="flex-1 px-3.5 py-2.5 bg-[#0f0f13] border border-[#3d3d52] rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#7c5cbf]"
           />
           <button
             type="submit"
             disabled={isGenerating || !prompt.trim()}
-            className="px-5 py-2 bg-[#7c5cbf] hover:bg-[#8e6fd1] text-white text-xs font-bold uppercase tracking-wider rounded flex items-center justify-center gap-2 shadow-md disabled:opacity-50 transition"
+            aria-label="Gửi yêu cầu sáng tác đến Google Gemini AI"
+            className="px-5 py-2.5 bg-gradient-to-r from-[#7c5cbf] to-indigo-600 hover:from-[#8e6fd1] hover:to-indigo-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg flex items-center justify-center gap-2 shadow-md disabled:opacity-50 transition"
           >
             {isGenerating ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Composing...
+                <Loader2 className="w-4 h-4 animate-spin" /> Đang Sáng Tác...
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" /> Generate
+                <Sparkles className="w-4 h-4 text-yellow-300" /> Sáng Tác Bằng Gemini
               </>
             )}
           </button>
