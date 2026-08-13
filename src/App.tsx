@@ -13,10 +13,21 @@ import { ExportPanel } from "./components/ExportPanel";
 import { SheetNotation } from "./components/SheetNotation";
 import { SavedProjectsModal } from "./components/SavedProjectsModal";
 import { AccessibilityModal } from "./components/AccessibilityModal";
+import { NoteVelocityModal } from "./components/NoteVelocityModal";
 import { Toast } from "./components/Toast";
-import { Music, Layers, Folder, Sparkles, BookOpen, Music2, Sun, Moon, Eye, Keyboard } from "lucide-react";
+import { Music, Layers, Folder, Sparkles, BookOpen, Music2, Sun, Moon, Eye, Keyboard, CheckCircle, Save, Sliders, Volume2, ShieldAlert } from "lucide-react";
 
 export default function App() {
+  // Load cached auto-save state from localStorage
+  const cachedData = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("harmonics_autosave_v1");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   // App state with Undo/Redo history stack
   const {
     chords,
@@ -27,14 +38,20 @@ export default function App() {
     canRedo,
     pastCount,
     futureCount,
-  } = useChordHistory([]);
+  } = useChordHistory(cachedData?.chords || []);
 
-  const [bpm, setBpm] = useState<number>(90);
-  const [timeSignature, setTimeSignature] = useState<"3/4" | "4/4" | "6/8">("4/4");
-  const [instrument, setInstrument] = useState<InstrumentType>("piano");
-  const [volume, setVolume] = useState<number>(80);
-  const [loop, setLoop] = useState<boolean>(true);
-  const [metronome, setMetronome] = useState<boolean>(false);
+  const [bpm, setBpm] = useState<number>(cachedData?.bpm ?? 90);
+  const [timeSignature, setTimeSignature] = useState<"3/4" | "4/4" | "6/8">(cachedData?.timeSignature ?? "4/4");
+  const [instrument, setInstrument] = useState<InstrumentType>(cachedData?.instrument ?? "piano");
+  const [volume, setVolume] = useState<number>(cachedData?.volume ?? 80);
+  const [loop, setLoop] = useState<boolean>(cachedData?.loop ?? true);
+  const [metronome, setMetronome] = useState<boolean>(cachedData?.metronome ?? false);
+
+  // Velocity modal state
+  const [velocityModalChord, setVelocityModalChord] = useState<ChordItem | null>(null);
+
+  // Auto-save timestamp tracking
+  const [lastAutoSaveTime, setLastAutoSaveTime] = useState<string | null>(null);
 
   // Selected chord for theory inspector
   const [selectedChordForDetails, setSelectedChordForDetails] = useState<ChordItem | null>(null);
@@ -62,7 +79,32 @@ export default function App() {
 
   // Key detection & Custom Key override
   const autoDetectedKey = detectKeyFromChords(chords.map((c) => c.name));
-  const [customKey, setCustomKey] = useState<{ root: string; mode: "major" | "minor" } | null>(null);
+  const [customKey, setCustomKey] = useState<{ root: string; mode: "major" | "minor" } | null>(
+    cachedData?.customKey ?? null
+  );
+
+  // Auto-save effect: save progression and settings automatically to localStorage
+  useEffect(() => {
+    const dataToSave = {
+      chords,
+      bpm,
+      timeSignature,
+      instrument,
+      volume,
+      loop,
+      metronome,
+      customKey,
+      savedAt: Date.now(),
+    };
+    try {
+      localStorage.setItem("harmonics_autosave_v1", JSON.stringify(dataToSave));
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+      setLastAutoSaveTime(timeStr);
+    } catch (e) {
+      console.error("Auto-save failed:", e);
+    }
+  }, [chords, bpm, timeSignature, instrument, volume, loop, metronome, customKey]);
 
   const activeKey: KeyResult = customKey
     ? {
@@ -93,6 +135,7 @@ export default function App() {
     play,
     pause,
     stop,
+    panic,
     playChordPreview,
     playNotePreview,
   } = useAudioEngine({
@@ -104,6 +147,14 @@ export default function App() {
     metronome,
     chords: chordsWithRoman,
   });
+
+  const handleSaveVelocityModal = (updatedChord: ChordItem) => {
+    setChords((prev) => prev.map((c) => (c.id === updatedChord.id ? updatedChord : c)));
+    if (selectedChordForDetails?.id === updatedChord.id) {
+      setSelectedChordForDetails(updatedChord);
+    }
+    showToast(`Đã cập nhật Velocity (${updatedChord.velocity ?? 80}%) & Độ ngân (${updatedChord.sustain ?? 100}%) cho ${updatedChord.name}`);
+  };
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -309,6 +360,36 @@ export default function App() {
               <span>Powered by Google Gemini</span>
             </span>
 
+            {/* Auto-Save Indicator */}
+            <div
+              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold whitespace-nowrap shadow-sm transition ${
+                theme === "light"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                  : "bg-emerald-950/40 text-emerald-300 border-emerald-500/30"
+              }`}
+              title="Đã tự động lưu tiến trình vào bộ nhớ tạm (localStorage)"
+            >
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Auto-Save {lastAutoSaveTime ? `(${lastAutoSaveTime})` : ""}</span>
+            </div>
+
+            {/* Emergency Panic Button to clear stuck notes */}
+            <button
+              onClick={() => {
+                panic();
+                showToast("🔊 Đã tắt khẩn cấp tất cả nốt nhạc!");
+              }}
+              className={`px-2.5 py-1.5 ${
+                theme === "light"
+                  ? "bg-red-50 hover:bg-red-100 text-red-800 border-red-300"
+                  : "bg-red-950/40 hover:bg-red-900/60 text-red-300 border-red-800/40"
+              } border rounded-lg text-xs font-bold flex items-center gap-1.5 transition whitespace-nowrap shadow-sm`}
+              title="Tắt khẩn cấp âm thanh nếu bị kẹt nốt (Panic)"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
+              <span className="hidden xl:inline">Panic</span>
+            </button>
+
             {/* Accessibility Modal Trigger */}
             <button
               onClick={() => setIsA11yModalOpen(true)}
@@ -418,6 +499,7 @@ export default function App() {
           onMoveChord={handleMoveChord}
           onPlayPreview={playChordPreview}
           onSelectChordForDetails={setSelectedChordForDetails}
+          onOpenVelocityModal={(chord) => setVelocityModalChord(chord)}
           onClearTimeline={() => {
             setChords([]);
             setSelectedChordForDetails(null);
@@ -546,6 +628,16 @@ export default function App() {
       <AccessibilityModal
         isOpen={isA11yModalOpen}
         onClose={() => setIsA11yModalOpen(false)}
+      />
+
+      {/* Note & Chord Velocity / Sustain Customization Modal */}
+      <NoteVelocityModal
+        isOpen={!!velocityModalChord}
+        chord={velocityModalChord}
+        onClose={() => setVelocityModalChord(null)}
+        onSave={handleSaveVelocityModal}
+        onPlayPreview={playChordPreview}
+        onPlayNote={playNotePreview}
       />
 
       {/* Toast Notification */}

@@ -15,6 +15,10 @@ export interface ChordItem {
   notes: string[]; // e.g. ["A3", "C4", "E4", "G4"]
   midiNotes: number[]; // e.g. [57, 60, 64, 67]
   romanNumeral?: string; // e.g. "vi", "I", "V7"
+  velocity?: number; // 1 to 100% (default 80)
+  sustain?: number; // 25 to 200% (default 100)
+  noteVelocities?: Record<number, number>; // midi -> 1..100
+  noteSustains?: Record<number, number>; // midi -> 25..200
 }
 
 export interface Progression {

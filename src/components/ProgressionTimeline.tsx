@@ -21,6 +21,7 @@ interface ProgressionTimelineProps {
   onMoveChord: (index: number, direction: -1 | 1) => void;
   onPlayPreview: (chord: ChordItem) => void;
   onSelectChordForDetails: (chord: ChordItem) => void;
+  onOpenVelocityModal?: (chord: ChordItem) => void;
   onClearTimeline: () => void;
   onSetChords: (chords: ChordItem[]) => void;
   onOpenPresetLibrary: () => void;
@@ -44,6 +45,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
   onMoveChord,
   onPlayPreview,
   onSelectChordForDetails,
+  onOpenVelocityModal,
   onClearTimeline,
   onSetChords,
   onOpenPresetLibrary,
@@ -56,6 +58,50 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
 }) => {
   const [isKeyPickerOpen, setIsKeyPickerOpen] = useState(false);
   const keyPickerRef = useRef<HTMLDivElement>(null);
+
+  // Drag and Drop State for Chord Reordering
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // leave container
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const reordered = [...chords];
+    const [moved] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    onSetChords(reordered);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   // Close key picker when clicking outside
   useEffect(() => {
@@ -310,11 +356,19 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
               totalChords={chords.length}
               isPlayingActive={playingIndex === idx}
               isSelectedForDetails={selectedChordForDetails?.id === chord.id}
+              isDragging={draggedIndex === idx}
+              isDragOver={dragOverIndex === idx}
               onDelete={onDeleteChord}
               onUpdateBeats={onUpdateBeats}
               onMove={onMoveChord}
               onPlayPreview={onPlayPreview}
               onSelectForDetails={onSelectChordForDetails}
+              onOpenVelocityModal={onOpenVelocityModal}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
             />
           ))}
         </div>
