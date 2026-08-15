@@ -56,7 +56,7 @@ export function useLearningAudio(instrument: InstrumentType = "piano") {
       oscillator: { type: "sine" },
       envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 },
     }).toDestination();
-    click.volume.value = -3;
+    click.volume.value = 1;
     clickSynthRef.current = click;
 
     init();
@@ -68,7 +68,6 @@ export function useLearningAudio(instrument: InstrumentType = "piano") {
       if (samplerRef.current) {
         try {
           samplerRef.current.releaseAll();
-          samplerRef.current.dispose();
         } catch (_) {}
       }
       if (fallbackSynthRef.current) {

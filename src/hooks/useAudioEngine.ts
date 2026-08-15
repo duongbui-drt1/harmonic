@@ -25,7 +25,7 @@ export interface UseAudioEngineOptions {
   arpeggioSettings?: ArpeggioSettings;
 }
 
-// Helper to convert 0-100% volume into decibels with ultra-boosted gain headroom (up to +24dB boost)
+// Helper to convert 0-100% volume into decibels with gain headroom
 const volumeToDb = (vol: number): number => {
   if (vol <= 0) return -100;
   const gainRatio = Math.max(0.01, (vol / 100) * 16.0);
@@ -201,7 +201,7 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
         release: 0.01,
       },
     }).toDestination();
-    synth.volume.value = -4; // Clear click track level
+    synth.volume.value = 1; // Metronome click +1dB
     clickSynthRef.current = synth;
 
     const kick = new Tone.MembraneSynth({
@@ -210,14 +210,14 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
       oscillator: { type: "sine" },
       envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 0.4 },
     }).toDestination();
-    kick.volume.value = 4;
+    kick.volume.value = 1; // Kick +1dB
     kickSynthRef.current = kick;
 
     const snare = new Tone.NoiseSynth({
       noise: { type: "white" },
       envelope: { attack: 0.001, decay: 0.2, sustain: 0 },
     }).toDestination();
-    snare.volume.value = -2;
+    snare.volume.value = 2; // Snare +2dB
     snareSynthRef.current = snare;
 
     const hihat = new Tone.MetalSynth({
@@ -227,7 +227,7 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
       resonance: 4000,
       octaves: 1.5,
     }).toDestination();
-    hihat.volume.value = -12;
+    hihat.volume.value = -5.1; // Hihat +9dB from -14.1dB
     hihatSynthRef.current = hihat;
 
     return () => {
@@ -265,9 +265,12 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
         fallbackSynthRef.current = createFallbackSynth(inst).connect(reverbRef.current);
       }
 
-      if (Tone.getContext().state !== "running") {
-        await Tone.start();
-      }
+      // Try starting audio context if permitted; don't block sampler buffering on autoplay policy
+      try {
+        if (Tone.getContext().state !== "running") {
+          await Tone.start();
+        }
+      } catch (_) {}
 
       const sampler = await createInstrumentSampler(inst, (status) => {
         setLoadingStatus(status.message);
