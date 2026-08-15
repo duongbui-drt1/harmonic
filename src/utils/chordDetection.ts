@@ -112,3 +112,36 @@ export function detectChordFromMidiNotes(midiNotes: number[]): DetectedChord | n
     confidence: 0.5,
   };
 }
+
+export function detectChordFromNotes(noteNames: string[]): {
+  name: string;
+  notes: string[];
+  root: string;
+  quality: string;
+  confidence: number;
+} {
+  if (!noteNames || noteNames.length === 0) {
+    return { name: "", notes: [], root: "", quality: "", confidence: 0 };
+  }
+  const midis = noteNames.map((n) => {
+    const match = n.match(/^([A-G][#b]?)(-?\d+)?$/i);
+    if (!match) return 60;
+    const baseMap: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+    const letter = match[1].charAt(0).toUpperCase();
+    const acc = match[1].slice(1);
+    const oct = match[2] ? parseInt(match[2], 10) : 4;
+    let offset = 0;
+    if (acc === "#") offset = 1;
+    if (acc === "b") offset = -1;
+    return (oct + 1) * 12 + (baseMap[letter] ?? 0) + offset;
+  });
+
+  const detected = detectChordFromMidiNotes(midis);
+  return {
+    name: detected ? detected.name : noteNames.join(" "),
+    notes: noteNames,
+    root: detected ? detected.root : "",
+    quality: detected ? detected.quality : "",
+    confidence: detected ? detected.confidence : 0,
+  };
+}

@@ -21,14 +21,62 @@ export interface ChordItem {
   noteSustains?: Record<number, number>; // midi -> 25..200
 }
 
+export type TimeSignatureString =
+  | "2/4"
+  | "3/4"
+  | "4/4"
+  | "6/8"
+  | "3/8"
+  | "9/8"
+  | "12/8"
+  | "2/2"
+  | "5/4"
+  | "7/8"
+  | string;
+
+export type ArpeggioPattern =
+  | "off"
+  | "up"
+  | "down"
+  | "up_down"
+  | "down_up"
+  | "up_down_inclusive"
+  | "alberti"
+  | "fingerpicking"
+  | "stairway"
+  | "pulse"
+  | "random";
+
+export type ArpeggioRate =
+  | "1/4"
+  | "1/8"
+  | "1/8T"
+  | "1/16"
+  | "1/16T"
+  | "1/32";
+
+export interface ArpeggioSettings {
+  enabled: boolean;
+  pattern: ArpeggioPattern;
+  rate: ArpeggioRate;
+  octaves: number;
+  gate: number;
+  swing: number;
+  accentFirstBeat: boolean;
+  humanize: boolean;
+  rootBassNote: boolean;
+}
+
 export interface Progression {
   id: string;
   name: string;
   key: string; // e.g. "C"
   mode: "major" | "minor";
   bpm: number;
-  timeSignature: "3/4" | "4/4" | "6/8";
+  timeSignature: TimeSignatureString;
+  timeSignatureGrouping?: number[];
   chords: ChordItem[];
+  arpeggioSettings?: ArpeggioSettings;
   createdAt: number;
 }
 
@@ -50,7 +98,9 @@ export interface PresetProgression {
   key: string;
   mode: "major" | "minor";
   bpm: number;
-  timeSignature: "3/4" | "4/4" | "6/8";
+  timeSignature: TimeSignatureString;
+  timeSignatureGrouping?: number[];
+  arpeggioSettings?: ArpeggioSettings;
   chords: Array<{ name: string; beats: number }>;
 }
 

@@ -36,7 +36,11 @@ export function analyzeRomanNumeralAdvanced(
   const targetMidi = (rootMidi + 5) % 12;
   const targetInterval = (targetMidi - keyMidi + 12) % 12;
 
-  if ((sym.quality === "dominant7" || sym.quality === "dominant9" || sym.quality === "major") && interval !== 7) {
+  // A secondary dominant must be a dominant quality (or a major triad acting as secondary dominant when not diatonic I/IV)
+  const isExplicitDominant = sym.quality === "dominant7" || sym.quality === "dominant9";
+  const isAlteredMajorTriad = sym.quality === "major" && interval !== 0 && interval !== 5;
+
+  if ((isExplicitDominant || isAlteredMajorTriad) && interval !== 7) {
     const targetRomanBase = romanNumeralsMajor[targetInterval];
     const targetInScale = scaleSteps.includes(targetInterval);
     if (targetInScale && targetInterval !== 0) {

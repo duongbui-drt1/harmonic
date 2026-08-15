@@ -42,9 +42,21 @@ export const QUALITY_DEFINITIONS: QualityDef[] = [
 ];
 
 export function pitchClassToMidiValue(pc: string): number {
-  let idx = NOTE_NAMES_SHARP.indexOf(pc as PitchClass);
-  if (idx === -1) idx = NOTE_NAMES_FLAT.indexOf(pc as PitchClass);
-  return idx === -1 ? 0 : idx;
+  if (!pc || typeof pc !== "string") return 0;
+  const clean = pc.trim();
+  const match = clean.match(/^([A-Ga-g])([#bxX]*)/);
+  if (!match) return 0;
+  const letter = match[1].toUpperCase();
+  const accidentals = match[2] || "";
+  const baseMap: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const base = baseMap[letter] ?? 0;
+  let offset = 0;
+  for (const c of accidentals) {
+    if (c === "#") offset += 1;
+    else if (c === "b" || c === "B") offset -= 1;
+    else if (c === "x" || c === "X") offset += 2;
+  }
+  return (((base + offset) % 12) + 12) % 12;
 }
 
 export function midiToPitchClass(midi: number, preferFlats = false): string {

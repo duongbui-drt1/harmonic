@@ -1,5 +1,7 @@
 import * as Tone from "tone";
-import { ChordItem, InstrumentType } from "../types";
+import { ChordItem, InstrumentType, ArpeggioSettings } from "../types";
+import { TimeSignature, RhythmRegistry } from "../music/rhythm";
+import { ArpeggiatorEngine } from "../music/arpeggio";
 
 /**
  * Converts a Web Audio API AudioBuffer into a WAV formatted Blob
@@ -73,15 +75,27 @@ export function audioBufferToWav(buffer: AudioBuffer): Blob {
 
 /**
  * Renders the chord progression offline using Tone.js and encodes as a WAV file
+ * with full meter & time signature awareness
  */
 export async function renderProgressionToWav(
   chords: ChordItem[],
   bpm: number,
-  instrumentType: InstrumentType = "piano"
+  instrumentType: InstrumentType = "piano",
+  timeSignature?: TimeSignature | string,
+  grouping?: number[],
+  arpeggioSettings?: ArpeggioSettings
 ): Promise<Blob> {
-  const secondsPerBeat = 60 / bpm;
-  const totalBeats = chords.reduce((sum, c) => sum + c.beats, 0);
-  const durationInSeconds = Math.max(1, totalBeats * secondsPerBeat + 1.8); // Include decay tail
+  const tsModel =
+    timeSignature instanceof TimeSignature
+      ? timeSignature
+      : RhythmRegistry.getTimeSignature(timeSignature || "4/4", grouping);
+
+  let totalDuration = 0;
+  chords.forEach((c) => {
+    totalDuration += tsModel.getChordDurationInSeconds(c.beats, bpm);
+  });
+
+  const durationInSeconds = Math.max(1, totalDuration + 2.0); // Include decay tail
 
   const toneBuffer = await Tone.Offline(async () => {
     // Setup Reverb Node in offline context
@@ -117,16 +131,41 @@ export async function renderProgressionToWav(
     }
 
     let currentTime = 0;
-    chords.forEach((chord) => {
-      const chordDuration = chord.beats * secondsPerBeat;
-      const notes =
-        chord.notes && chord.notes.length > 0
-          ? chord.notes
-          : chord.midiNotes
-          ? chord.midiNotes.map((m) => Tone.Frequency(m, "midi").toNote())
-          : ["C4", "E4", "G4"];
+    const isArpActive =
+      arpeggioSettings?.enabled &&
+      arpeggioSettings.pattern !== "off" &&
+      instrumentType !== "drums";
 
-      synth.triggerAttackRelease(notes, chordDuration * 0.92, currentTime);
+    chords.forEach((chord) => {
+      const chordDuration = tsModel.getChordDurationInSeconds(chord.beats, bpm);
+
+      if (isArpActive && arpeggioSettings) {
+        const arpEvents = ArpeggiatorEngine.generateArpeggioEvents(
+          chord,
+          chordDuration,
+          bpm,
+          arpeggioSettings
+        );
+
+        arpEvents.forEach((ev) => {
+          synth.triggerAttackRelease(
+            ev.noteName,
+            ev.durationSeconds,
+            currentTime + ev.timeOffsetSeconds,
+            ev.velocity
+          );
+        });
+      } else {
+        const notes =
+          chord.notes && chord.notes.length > 0
+            ? chord.notes
+            : chord.midiNotes
+            ? chord.midiNotes.map((m) => Tone.Frequency(m, "midi").toNote())
+            : ["C4", "E4", "G4"];
+
+        synth.triggerAttackRelease(notes, chordDuration * 0.92, currentTime);
+      }
+
       currentTime += chordDuration;
     });
   }, durationInSeconds);

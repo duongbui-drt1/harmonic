@@ -3,16 +3,11 @@ import { NOTE_NAMES_SHARP, NOTE_NAMES_FLAT, midiToNoteName, noteNameToMidi } fro
 import { parseChordName } from "./chordData";
 
 /**
- * Transpose a single ChordItem by a given number of semitones (+1, -1, +2, etc.)
+ * Transpose a chord name string by a given number of semitones
  */
-export function transposeChord(chord: ChordItem, semitones: number): ChordItem {
-  if (semitones === 0) return chord;
-
-  // 1. Shift all MIDI notes directly
-  const newMidiNotes = (chord.midiNotes || []).map((m) => m + semitones);
-
-  // 2. Parse chord name to extract root, quality suffix, and optional slash bass
-  const cleanName = chord.name.trim();
+export function transposeChordName(chordName: string, semitones: number): string {
+  if (!chordName || semitones === 0) return chordName;
+  const cleanName = chordName.trim();
   let mainChordStr = cleanName;
   let bassStr: string | undefined;
 
@@ -23,39 +18,56 @@ export function transposeChord(chord: ChordItem, semitones: number): ChordItem {
   }
 
   const rootMatch = mainChordStr.match(/^([A-G][#b]?)(.*)$/i);
-  let newRoot = chord.root;
-  let newName = chord.name;
+  if (!rootMatch) return cleanName;
 
-  if (rootMatch) {
-    const rawRoot = rootMatch[1];
-    const suffix = rootMatch[2] || "";
+  const rawRoot = rootMatch[1];
+  const suffix = rootMatch[2] || "";
 
-    // Determine root pitch index (0 to 11)
-    let rootMidi = noteNameToMidi(`${rawRoot}4`);
-    let rootPitchClass = (rootMidi % 12 + 12) % 12;
-    let newRootPitchClass = (rootPitchClass + semitones + 12) % 12;
+  // Determine root pitch index (0 to 11)
+  const rootMidi = noteNameToMidi(`${rawRoot}4`);
+  const rootPitchClass = ((rootMidi % 12) + 12) % 12;
+  const newRootPitchClass = ((rootPitchClass + semitones) % 12 + 12) % 12;
 
-    // Use flats if semitones < 0 or original root had a flat, otherwise sharps
-    const preferFlats = semitones < 0 || rawRoot.includes("b") || ["F", "Bb", "Eb", "Ab", "Db"].includes(rawRoot);
-    newRoot = preferFlats ? NOTE_NAMES_FLAT[newRootPitchClass] : NOTE_NAMES_SHARP[newRootPitchClass];
+  // Use flats if semitones < 0 or original root had a flat, otherwise sharps
+  const preferFlats = semitones < 0 || rawRoot.includes("b") || ["F", "Bb", "Eb", "Ab", "Db"].includes(rawRoot);
+  const newRoot = preferFlats ? NOTE_NAMES_FLAT[newRootPitchClass] : NOTE_NAMES_SHARP[newRootPitchClass];
 
-    // Transpose slash bass if present
-    let newBassStr = "";
-    if (bassStr) {
-      const bassMatch = bassStr.match(/^([A-G][#b]?)(.*)$/i);
-      if (bassMatch) {
-        let bassMidi = noteNameToMidi(`${bassMatch[1]}4`);
-        let bassPitchClass = (bassMidi % 12 + 12) % 12;
-        let newBassPitchClass = (bassPitchClass + semitones + 12) % 12;
-        const newBassRoot = preferFlats ? NOTE_NAMES_FLAT[newBassPitchClass] : NOTE_NAMES_SHARP[newBassPitchClass];
-        newBassStr = `/${newBassRoot}${bassMatch[2] || ""}`;
-      } else {
-        newBassStr = `/${bassStr}`;
-      }
+  let newBassStr = "";
+  if (bassStr) {
+    const bassMatch = bassStr.match(/^([A-G][#b]?)(.*)$/i);
+    if (bassMatch) {
+      const bassMidi = noteNameToMidi(`${bassMatch[1]}4`);
+      const bassPitchClass = ((bassMidi % 12) + 12) % 12;
+      const newBassPitchClass = ((bassPitchClass + semitones) % 12 + 12) % 12;
+      const newBassRoot = preferFlats ? NOTE_NAMES_FLAT[newBassPitchClass] : NOTE_NAMES_SHARP[newBassPitchClass];
+      newBassStr = `/${newBassRoot}${bassMatch[2] || ""}`;
+    } else {
+      newBassStr = `/${bassStr}`;
     }
-
-    newName = `${newRoot}${suffix}${newBassStr}`;
   }
+
+  return `${newRoot}${suffix}${newBassStr}`;
+}
+
+/**
+ * Transpose a single ChordItem or chord name string by semitones (+1, -1, +2, etc.)
+ */
+export function transposeChord(chord: ChordItem, semitones: number): ChordItem;
+export function transposeChord(chord: string, semitones: number): string;
+export function transposeChord(chord: ChordItem | string, semitones: number): ChordItem | string {
+  if (typeof chord === "string") {
+    return transposeChordName(chord, semitones);
+  }
+
+  if (semitones === 0) return chord;
+
+  // 1. Shift all MIDI notes directly
+  const newMidiNotes = (chord.midiNotes || []).map((m) => m + semitones);
+
+  // 2. Transpose chord name
+  const newName = transposeChordName(chord.name, semitones);
+  const rootMatch = newName.match(/^([A-G][#b]?)/i);
+  const newRoot = rootMatch ? rootMatch[1] : chord.root;
 
   // 3. Re-calculate human-readable note names
   const useFlats = newRoot.includes("b") || ["F", "Bb", "Eb", "Ab", "Db"].includes(newRoot);

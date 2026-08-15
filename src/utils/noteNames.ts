@@ -1,28 +1,55 @@
 export const NOTE_NAMES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 export const NOTE_NAMES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+export const PITCH_CLASS_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+const BASE_NOTE_SEMITONES: Record<string, number> = {
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
+};
 
 export function midiToNoteName(midi: number, useFlats = false): string {
-  const pitchClass = (midi % 12 + 12) % 12;
+  const pitchClass = ((midi % 12) + 12) % 12;
   const octave = Math.floor(midi / 12) - 1;
   const noteName = useFlats ? NOTE_NAMES_FLAT[pitchClass] : NOTE_NAMES_SHARP[pitchClass];
   return `${noteName}${octave}`;
 }
 
 export function noteNameToMidi(noteName: string): number {
-  const match = noteName.match(/^([A-Ga-g][#b]?)(-?\d+)$/);
+  if (!noteName || typeof noteName !== "string") return 60;
+  const clean = noteName.trim();
+  const match = clean.match(/^([A-Ga-g])([#bxX]*)(-?\d+)?$/);
   if (!match) return 60; // default C4
-  let [, pitchStr, octaveStr] = match;
-  pitchStr = pitchStr.toUpperCase();
-  if (pitchStr === "DB") pitchStr = "C#";
-  if (pitchStr === "EB") pitchStr = "D#";
-  if (pitchStr === "GB") pitchStr = "F#";
-  if (pitchStr === "AB") pitchStr = "G#";
-  if (pitchStr === "BB") pitchStr = "A#";
 
-  const pitchIndex = NOTE_NAMES_SHARP.indexOf(pitchStr);
-  const octave = parseInt(octaveStr, 10);
-  if (pitchIndex === -1) return 60;
-  return (octave + 1) * 12 + pitchIndex;
+  const letter = match[1].toUpperCase();
+  const accidentals = match[2] || "";
+  const octave = match[3] !== undefined ? parseInt(match[3], 10) : 4;
+
+  const baseSemitones = BASE_NOTE_SEMITONES[letter];
+  if (baseSemitones === undefined) return 60;
+
+  let accidentalOffset = 0;
+  for (const char of accidentals) {
+    if (char === "#") accidentalOffset += 1;
+    else if (char === "b" || char === "B") accidentalOffset -= 1;
+    else if (char === "x" || char === "X") accidentalOffset += 2;
+  }
+
+  return (octave + 1) * 12 + baseSemitones + accidentalOffset;
+}
+
+export function noteToFrequency(note: string | number): number {
+  const midi = typeof note === "number" ? note : noteNameToMidi(note);
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+export const FREQUENCY_MAP: Record<string, number> = {};
+for (let m = 0; m <= 127; m++) {
+  FREQUENCY_MAP[midiToNoteName(m)] = noteToFrequency(m);
 }
 
 export function normalizeNoteName(note: string): string {

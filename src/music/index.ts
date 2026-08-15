@@ -13,3 +13,5 @@ export * from "./analysis/BasslineAnalyzer";
 export * from "./modulation/ModulationDetector";
 export * from "./genre/GenreDNA";
 export * from "./midi/MidiAnalyzer";
+export * from "./rhythm";
+export * from "./arpeggio";

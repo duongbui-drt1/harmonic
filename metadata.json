@@ -1,6 +1,6 @@
 {
-  "name": "Chord Progression Analyzer & Composer",
-  "description": "Interactive music theory tool to analyze, build, play, and export chord progressions with realistic sample audio and AI assistance.",
+  "name": "HarmonicX Music Theory & Learning Workstation",
+  "description": "Interactive music theory learning and composition workstation featuring direct audio-visual lessons, chord and scale explorers, ear training, and harmonic analysis.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

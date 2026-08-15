@@ -8,10 +8,14 @@ export function compareVoiceLeading(chordAStr: string, chordBStr: string): Voice
   const midisA = getChordMidiNotesFromSymbol(symA, 4);
   let midisB = getChordMidiNotesFromSymbol(symB, 4);
 
+  // Common tones (pitch class intersection)
+  const pitchClassesA = new Set(midisA.map((m) => midiToPitchClass(m)));
+  const pitchClassesB = new Set(midisB.map((m) => midiToPitchClass(m)));
+  const commonTones: string[] = Array.from(pitchClassesA).filter((pc) => pitchClassesB.has(pc));
+
   // Align length by padding or taking closest voices
   const minLen = Math.min(midisA.length, midisB.length);
   const noteMotions: VoiceLeadingNoteMotion[] = [];
-  const commonTones: string[] = [];
   let totalDist = 0;
 
   for (let i = 0; i < minLen; i++) {
@@ -26,7 +30,6 @@ export function compareVoiceLeading(chordAStr: string, chordBStr: string): Voice
     let motionType: VoiceLeadingNoteMotion["motionType"] = "common_tone";
     if (diff === 0) {
       motionType = "common_tone";
-      commonTones.push(nameA);
     } else if (diff === 1 || diff === 2) {
       motionType = "step_up";
     } else if (diff === -1 || diff === -2) {

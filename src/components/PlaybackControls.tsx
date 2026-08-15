@@ -1,6 +1,25 @@
-import React from "react";
-import { InstrumentType } from "../types";
-import { Play, Pause, Square, Repeat, Timer, Loader2, Volume2, VolumeX } from "lucide-react";
+import React, { useState } from "react";
+import { InstrumentType, TimeSignatureString, ArpeggioSettings, ChordItem } from "../types";
+import { TimeSignature, RhythmRegistry } from "../music/rhythm";
+import { TimeSignatureSelector } from "./TimeSignatureSelector";
+import { RhythmVisualizer } from "./RhythmVisualizer";
+import { ArpeggiatorPanel } from "./ArpeggiatorPanel";
+import {
+  Play,
+  Pause,
+  Square,
+  Repeat,
+  Timer,
+  Loader2,
+  Volume2,
+  VolumeX,
+  Activity,
+  Sliders,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Piano,
+} from "lucide-react";
 
 interface PlaybackControlsProps {
   isPlaying?: boolean;
@@ -8,18 +27,25 @@ interface PlaybackControlsProps {
   loadingStatus?: string;
   loadingPercent?: number;
   bpm?: number;
-  timeSignature?: "3/4" | "4/4" | "6/8";
+  timeSignature?: TimeSignatureString;
+  timeSignatureGrouping?: number[];
+  timeSignatureModel?: TimeSignature;
+  activeBeatIndex?: number | null;
+  activeSubdivisionIndex?: number | null;
+  activeAccent?: "strong" | "secondary" | "weak" | null;
   instrument?: InstrumentType;
   volume?: number;
   loop?: boolean;
   metronome?: boolean;
+  arpeggioSettings?: ArpeggioSettings;
+  sampleChord?: ChordItem;
   onPlay?: () => void;
   onPause?: () => void;
   onStop?: () => void;
   onChangeBpm?: (bpm: number) => void;
   onBpmChange?: (bpm: number) => void;
-  onChangeTimeSignature?: (ts: "3/4" | "4/4" | "6/8") => void;
-  onTimeSignatureChange?: (ts: "3/4" | "4/4" | "6/8") => void;
+  onChangeTimeSignature?: (ts: TimeSignatureString, grouping?: number[]) => void;
+  onTimeSignatureChange?: (ts: TimeSignatureString, grouping?: number[]) => void;
   onChangeInstrument?: (inst: InstrumentType) => void;
   onInstrumentChange?: (inst: InstrumentType) => void;
   onChangeVolume?: (volume: number) => void;
@@ -28,6 +54,9 @@ interface PlaybackControlsProps {
   onLoopChange?: (loop: boolean) => void;
   onToggleMetronome?: () => void;
   onMetronomeChange?: (metronome: boolean) => void;
+  onChangeArpeggioSettings?: (settings: ArpeggioSettings) => void;
+  onPreviewArpeggio?: (chord: ChordItem, inst?: InstrumentType) => void;
+  onOpenMidiModal?: () => void;
 }
 
 export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
@@ -37,10 +66,17 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
   loadingPercent = 0,
   bpm = 120,
   timeSignature = "4/4",
+  timeSignatureGrouping,
+  timeSignatureModel,
+  activeBeatIndex = null,
+  activeSubdivisionIndex = null,
+  activeAccent = null,
   instrument = "piano",
   volume = 80,
   loop = false,
   metronome = false,
+  arpeggioSettings,
+  sampleChord,
   onPlay,
   onPause,
   onStop,
@@ -56,15 +92,25 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
   onLoopChange,
   onToggleMetronome,
   onMetronomeChange,
+  onChangeArpeggioSettings,
+  onPreviewArpeggio,
+  onOpenMidiModal,
 }) => {
+  const [showRhythmVisualizer, setShowRhythmVisualizer] = useState(true);
+  const [showArpeggiatorPanel, setShowArpeggiatorPanel] = useState(false);
+
+  const resolvedModel =
+    timeSignatureModel ||
+    RhythmRegistry.getTimeSignature(timeSignature, timeSignatureGrouping);
+
   const handleBpm = (val: number) => {
     onChangeBpm?.(val);
     onBpmChange?.(val);
   };
 
-  const handleTimeSig = (ts: "3/4" | "4/4" | "6/8") => {
-    onChangeTimeSignature?.(ts);
-    onTimeSignatureChange?.(ts);
+  const handleTimeSig = (ts: TimeSignatureString, grouping?: number[]) => {
+    onChangeTimeSignature?.(ts, grouping);
+    onTimeSignatureChange?.(ts, grouping);
   };
 
   const handleInstrument = (inst: InstrumentType) => {
@@ -87,8 +133,26 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
     onMetronomeChange?.(!metronome);
   };
 
+  const handleToggleArpeggio = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!onChangeArpeggioSettings || !arpeggioSettings) return;
+    onChangeArpeggioSettings({
+      ...arpeggioSettings,
+      enabled: !arpeggioSettings.enabled,
+    });
+  };
+
+  const beatUnitSymbol =
+    resolvedModel.beatUnit === "dotted-quarter"
+      ? "♩."
+      : resolvedModel.beatUnit === "half"
+      ? "𝅗𝅥"
+      : resolvedModel.beatUnit === "eighth"
+      ? "♪"
+      : "♩";
+
   return (
-    <div className="bg-[#1a1a24] border border-[#2d2d3d] rounded-xl p-4 shadow-xl">
+    <div className="bg-[#1a1a24] border border-[#2d2d3d] rounded-xl p-4 shadow-xl space-y-3">
       <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
         {/* Playback Buttons */}
         <div className="flex items-center gap-2">
@@ -136,41 +200,72 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                 ? "bg-[#7c5cbf]/20 border-[#7c5cbf] text-[#a88beb]"
                 : "bg-[#252533] border-[#3d3d52] text-gray-400 hover:text-white"
             }`}
-            title="Toggle Metronome (Click Track)"
+            title="Toggle Metronome (Click Track with Grouping Accents)"
           >
             <Timer className="w-4 h-4" />
             <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Click</span>
           </button>
+
+          {/* Arpeggiator Quick Button */}
+          {arpeggioSettings && (
+            <div className="flex items-center">
+              <button
+                onClick={() => setShowArpeggiatorPanel(!showArpeggiatorPanel)}
+                className={`px-3 py-2 rounded-lg border flex items-center gap-1.5 transition ${
+                  arpeggioSettings.enabled
+                    ? "bg-[#7c5cbf]/20 border-[#7c5cbf] text-[#a88beb] shadow-sm shadow-[#7c5cbf]/20"
+                    : "bg-[#252533] border-[#3d3d52] text-gray-400 hover:text-white"
+                }`}
+                title="Cấu hình bộ rải nốt Arpeggiator"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">
+                  Arp: {arpeggioSettings.enabled ? arpeggioSettings.rate : "Off"}
+                </span>
+                {showArpeggiatorPanel ? (
+                  <ChevronUp className="w-3 h-3 text-gray-400 ml-0.5" />
+                ) : (
+                  <ChevronDown className="w-3 h-3 text-gray-400 ml-0.5" />
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* MIDI Controller Quick Button */}
+          {onOpenMidiModal && (
+            <button
+              onClick={onOpenMidiModal}
+              className="px-3 py-2 rounded-lg border bg-[#252533] border-[#3d3d52] text-purple-300 hover:text-white hover:border-purple-500 flex items-center gap-1.5 transition"
+              title="Cài đặt và giám sát thiết bị MIDI Controller"
+            >
+              <Piano className="w-4 h-4 text-purple-400" />
+              <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">MIDI</span>
+            </button>
+          )}
         </div>
 
         {/* BPM Controls */}
         <div className="flex items-center gap-3 bg-[#0f0f13] px-3.5 py-1.5 rounded-lg border border-[#2d2d3d] w-full sm:w-auto">
-          <span className="text-[11px] font-mono font-bold text-gray-400 w-16">BPM: <span className="text-[#a88beb]">{bpm}</span></span>
+          <span className="text-[11px] font-mono font-bold text-gray-400 w-24">
+            BPM ({beatUnitSymbol}): <span className="text-[#a88beb]">{bpm}</span>
+          </span>
           <input
             type="range"
             min={40}
-            max={200}
+            max={240}
             value={bpm}
             onChange={(e) => handleBpm(Number(e.target.value))}
-            className="w-32 accent-[#7c5cbf] cursor-pointer"
+            className="w-28 sm:w-32 accent-[#7c5cbf] cursor-pointer"
           />
         </div>
 
-        {/* Time Signature */}
-        <div className="flex items-center gap-1 bg-[#0f0f13] p-1 rounded-lg border border-[#2d2d3d]">
-          {(["3/4", "4/4", "6/8"] as const).map((ts) => (
-            <button
-              key={ts}
-              onClick={() => handleTimeSig(ts)}
-              className={`px-2.5 py-1 text-xs font-mono font-bold rounded transition ${
-                timeSignature === ts
-                  ? "bg-[#7c5cbf] text-white"
-                  : "text-gray-400 hover:text-white"
-              }`}
-            >
-              {ts}
-            </button>
-          ))}
+        {/* Generic Time Signature Selector with Grouping and Category support */}
+        <div className="flex items-center gap-1.5">
+          <TimeSignatureSelector
+            timeSignature={timeSignature}
+            timeSignatureGrouping={timeSignatureGrouping}
+            onChangeTimeSignature={handleTimeSig}
+          />
         </div>
 
         {/* Instrument Selector & Volume Control */}
@@ -218,6 +313,33 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
           )}
         </div>
       </div>
+
+      {/* Expandable Arpeggiator Control Panel */}
+      {showArpeggiatorPanel && arpeggioSettings && onChangeArpeggioSettings && (
+        <div className="pt-2">
+          <ArpeggiatorPanel
+            settings={arpeggioSettings}
+            onChangeSettings={onChangeArpeggioSettings}
+            sampleChord={sampleChord}
+            instrument={instrument}
+            bpm={bpm}
+            onPreviewArpeggio={onPreviewArpeggio}
+            onClose={() => setShowArpeggiatorPanel(false)}
+          />
+        </div>
+      )}
+
+      {/* Real-time Rhythm Visualizer & Beat Indicator */}
+      {showRhythmVisualizer && (
+        <RhythmVisualizer
+          timeSignatureModel={resolvedModel}
+          bpm={bpm}
+          isPlaying={isPlaying}
+          activeBeatIndex={activeBeatIndex}
+          activeSubdivisionIndex={activeSubdivisionIndex}
+          activeAccent={activeAccent}
+        />
+      )}
 
       {/* SoundFont Loading Progress */}
       {isLoading && (

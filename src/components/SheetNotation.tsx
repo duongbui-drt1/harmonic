@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import VexFlow from "vexflow";
-import { ChordItem } from "../types";
+import { ChordItem, TimeSignatureString } from "../types";
+import { TimeSignature, RhythmRegistry } from "../music/rhythm";
 import { midiToNoteName } from "../utils/noteNames";
 import { Printer, Download, Music, Sun, Moon, Layers } from "lucide-react";
 
@@ -8,12 +9,26 @@ interface SheetNotationProps {
   chords?: ChordItem[];
   keyName?: string;
   bpm?: number;
+  timeSignature?: TimeSignatureString;
+  timeSignatureGrouping?: number[];
+  timeSignatureModel?: TimeSignature;
 }
 
-export const SheetNotation: React.FC<SheetNotationProps> = ({ chords = [], keyName = "C Major", bpm = 90 }) => {
+export const SheetNotation: React.FC<SheetNotationProps> = ({
+  chords = [],
+  keyName = "C Major",
+  bpm = 90,
+  timeSignature = "4/4",
+  timeSignatureGrouping,
+  timeSignatureModel,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [paperTheme, setPaperTheme] = useState<"white" | "dark">("white"); // Paper White default for high legibility
   const [isGrandStaff, setIsGrandStaff] = useState<boolean>(true); // Treble + Bass Clef
+
+  const resolvedTimeSignature =
+    timeSignatureModel ||
+    RhythmRegistry.getTimeSignature(timeSignature, timeSignatureGrouping);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -38,9 +53,11 @@ export const SheetNotation: React.FC<SheetNotationProps> = ({ chords = [], keyNa
       context.setStrokeStyle(strokeStyle);
       context.setFillStyle(strokeStyle);
 
+      const tsNotation = `${resolvedTimeSignature.numerator}/${resolvedTimeSignature.denominator}`;
+
       // Treble Stave
       const staveTreble = new VF.Stave(15, 20, width - 30);
-      staveTreble.addClef("treble").addTimeSignature("4/4");
+      staveTreble.addClef("treble").addTimeSignature(tsNotation);
       staveTreble.setContext(context).draw();
 
       // Treble Notes
@@ -77,7 +94,10 @@ export const SheetNotation: React.FC<SheetNotationProps> = ({ chords = [], keyNa
         return note;
       });
 
-      const voiceTreble = new VF.Voice({ num_beats: chords.length * 4, beat_value: 4 });
+      const voiceTreble = new VF.Voice({
+        num_beats: Math.max(1, chords.length * resolvedTimeSignature.numerator),
+        beat_value: resolvedTimeSignature.denominator,
+      });
       voiceTreble.setStrict(false);
       voiceTreble.addTickables(trebleNotes);
 
@@ -87,7 +107,7 @@ export const SheetNotation: React.FC<SheetNotationProps> = ({ chords = [], keyNa
       // Optional Bass Stave
       if (isGrandStaff) {
         const staveBass = new VF.Stave(15, 140, width - 30);
-        staveBass.addClef("bass").addTimeSignature("4/4");
+        staveBass.addClef("bass").addTimeSignature(tsNotation);
         staveBass.setContext(context).draw();
 
         const bassNotes = chords.map((chord) => {
@@ -108,7 +128,10 @@ export const SheetNotation: React.FC<SheetNotationProps> = ({ chords = [], keyNa
           return note;
         });
 
-        const voiceBass = new VF.Voice({ num_beats: chords.length * 4, beat_value: 4 });
+        const voiceBass = new VF.Voice({
+          num_beats: Math.max(1, chords.length * resolvedTimeSignature.numerator),
+          beat_value: resolvedTimeSignature.denominator,
+        });
         voiceBass.setStrict(false);
         voiceBass.addTickables(bassNotes);
 
@@ -122,7 +145,7 @@ export const SheetNotation: React.FC<SheetNotationProps> = ({ chords = [], keyNa
     } catch (err) {
       console.error("VexFlow rendering error:", err);
     }
-  }, [chords, keyName, paperTheme, isGrandStaff]);
+  }, [chords, keyName, paperTheme, isGrandStaff, resolvedTimeSignature]);
 
   const handlePrintSheet = () => {
     if (chords.length === 0) return;
@@ -134,7 +157,7 @@ export const SheetNotation: React.FC<SheetNotationProps> = ({ chords = [], keyNa
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Phổ Nhạc Lead Sheet - ${keyName}</title>
+          <title>Phổ Nhạc Lead Sheet - ${keyName} (${resolvedTimeSignature.formatMeter()})</title>
           <style>
             body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px; background: #fff; color: #0f172a; }
             h1 { font-size: 24px; font-weight: 800; color: #1e1b4b; }
@@ -142,7 +165,7 @@ export const SheetNotation: React.FC<SheetNotationProps> = ({ chords = [], keyNa
           </style>
         </head>
         <body>
-          <h1>LEAD SHEET - GIỌNG ${keyName} (${bpm} BPM)</h1>
+          <h1>LEAD SHEET - GIỌNG ${keyName} (${resolvedTimeSignature.formatMeter()} · ${bpm} BPM)</h1>
           <div class="staff">${svgContent}</div>
           <script>window.onload = function() { window.print(); }</script>
         </body>
@@ -160,7 +183,7 @@ export const SheetNotation: React.FC<SheetNotationProps> = ({ chords = [], keyNa
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `pho_nhac_${keyName.replace(/\s+/g, "_")}.svg`;
+    a.download = `pho_nhac_${keyName.replace(/\s+/g, "_")}_${resolvedTimeSignature.name.replace("/", "-")}.svg`;
     a.click();
   };
 
@@ -176,6 +199,9 @@ export const SheetNotation: React.FC<SheetNotationProps> = ({ chords = [], keyNa
           </label>
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             Khuông Nhạc Nhạc Lý Standard <Music className="w-4 h-4 text-[#a88beb]" />
+            <span className="text-xs bg-[#7c5cbf]/30 text-[#cbb6f7] px-2 py-0.5 rounded font-mono border border-[#7c5cbf]/40">
+              {resolvedTimeSignature.formatMeter()}
+            </span>
           </h3>
         </div>
 

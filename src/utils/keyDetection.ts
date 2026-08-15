@@ -26,15 +26,14 @@ export function detectKeyFromChords(chordNames: string[]): KeyResult {
     return { key: "C", root: "C", mode: "major", displayName: "C Major" };
   }
 
-  // Pitch class counts and weights
-  let maxScore = -1;
   let bestKey = "C";
   let bestMode: "major" | "minor" = "major";
+  let maxScore = -9999;
 
   for (let rootPc = 0; rootPc < 12; rootPc++) {
     const rootName = NOTE_NAMES_SHARP[rootPc];
 
-    // Score Major key
+    // 1. Score Major Key
     let majorScore = 0;
     parsedChords.forEach((c, idx) => {
       if (!c) return;
@@ -45,16 +44,29 @@ export function detectKeyFromChords(chordNames: string[]): KeyResult {
       const semitones = (chordRootPc - rootPc + 12) % 12;
       const isFirst = idx === 0;
       const isLast = idx === parsedChords.length - 1;
+      const q = c.qualityDef.quality;
+      const isMinor = (q.startsWith("m") && !q.startsWith("maj")) || q.includes("dim") || q === "m7b5";
 
-      // Diatonic match bonus
-      if (MAJOR_SCALE.includes(semitones)) {
-        majorScore += 3;
-        // Extra weight for Tonic (0), Dominant (7), Subdominant (5)
-        if (semitones === 0) majorScore += isFirst || isLast ? 6 : 4;
-        if (semitones === 7) majorScore += 3;
-        if (semitones === 5) majorScore += 2;
+      // Diatonic qualities in Major: 0:M, 2:m, 4:m, 5:M, 7:M, 9:m, 11:dim
+      if (semitones === 0) {
+        majorScore += isMinor ? -4 : 8;
+        if (isFirst) majorScore += 10;
+        if (isLast) majorScore += 8;
+      } else if (semitones === 2) {
+        majorScore += isMinor ? 5 : 1;
+      } else if (semitones === 4) {
+        majorScore += isMinor ? 5 : 1;
+      } else if (semitones === 5) {
+        majorScore += !isMinor ? 6 : 1;
+      } else if (semitones === 7) {
+        majorScore += !isMinor ? 7 : 1;
+        if (isLast) majorScore += 3; // Half cadence
+      } else if (semitones === 9) {
+        majorScore += isMinor ? 5 : 1;
+      } else if (semitones === 11) {
+        majorScore += q.includes("dim") ? 4 : 0;
       } else {
-        majorScore -= 1; // Non-diatonic penalty
+        majorScore -= 5; // Non-diatonic in major
       }
     });
 
@@ -64,7 +76,7 @@ export function detectKeyFromChords(chordNames: string[]): KeyResult {
       bestMode = "major";
     }
 
-    // Score Minor key
+    // 2. Score Minor Key
     let minorScore = 0;
     parsedChords.forEach((c, idx) => {
       if (!c) return;
@@ -75,14 +87,29 @@ export function detectKeyFromChords(chordNames: string[]): KeyResult {
       const semitones = (chordRootPc - rootPc + 12) % 12;
       const isFirst = idx === 0;
       const isLast = idx === parsedChords.length - 1;
+      const q = c.qualityDef.quality;
+      const isMinor = (q.startsWith("m") && !q.startsWith("maj")) || q.includes("dim") || q === "m7b5";
 
-      if (MINOR_SCALE.includes(semitones)) {
-        minorScore += 3;
-        if (semitones === 0) minorScore += isFirst || isLast ? 6 : 4;
-        if (semitones === 7) minorScore += 3;
-        if (semitones === 5) minorScore += 2;
+      // Diatonic qualities in Minor: 0:m, 2:dim, 3:M, 5:m, 7:M(harmonic)/m(natural), 8:M, 10:M
+      if (semitones === 0) {
+        minorScore += isMinor ? 8 : -4;
+        if (isFirst) minorScore += 10;
+        if (isLast) minorScore += 8;
+      } else if (semitones === 2) {
+        minorScore += q.includes("dim") ? 4 : 1;
+      } else if (semitones === 3) {
+        minorScore += !isMinor ? 5 : 1;
+      } else if (semitones === 5) {
+        minorScore += isMinor ? 6 : 1;
+      } else if (semitones === 7) {
+        minorScore += !isMinor ? 8 : 4; // V or V7 in minor is major/dom7
+        if (isLast) minorScore += 3;
+      } else if (semitones === 8) {
+        minorScore += !isMinor ? 5 : 1;
+      } else if (semitones === 10) {
+        minorScore += !isMinor ? 5 : 1;
       } else {
-        minorScore -= 1;
+        minorScore -= 5;
       }
     });
 

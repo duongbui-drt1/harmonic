@@ -10,6 +10,7 @@ interface ChordCardProps {
   isSelectedForDetails: boolean;
   isDragging?: boolean;
   isDragOver?: boolean;
+  availableBeats?: number[];
   onDelete: (id: string) => void;
   onUpdateBeats: (id: string, beats: number) => void;
   onMove: (index: number, direction: -1 | 1) => void;
@@ -31,6 +32,7 @@ export const ChordCard: React.FC<ChordCardProps> = ({
   isSelectedForDetails,
   isDragging = false,
   isDragOver = false,
+  availableBeats,
   onDelete,
   onUpdateBeats,
   onMove,
@@ -45,6 +47,7 @@ export const ChordCard: React.FC<ChordCardProps> = ({
 }) => {
   const velocity = chord.velocity ?? 80;
   const sustain = chord.sustain ?? 100;
+  const beatOptions = availableBeats && availableBeats.length > 0 ? availableBeats : [1, 2, 4];
 
   return (
     <div
@@ -141,7 +144,7 @@ export const ChordCard: React.FC<ChordCardProps> = ({
       <div className={`mt-1 pt-1.5 border-t flex items-center justify-between gap-1 ${isPlayingActive ? "border-white/20" : "border-[#2d2d3d]"}`}>
         {/* Beats Selector */}
         <div className={`flex items-center gap-0.5 p-0.5 rounded border ${isPlayingActive ? "bg-[#6b4ca8] border-white/20" : "bg-[#0f0f13] border-[#2d2d3d]"}`}>
-          {[1, 2, 4].map((b) => (
+          {beatOptions.map((b) => (
             <button
               key={b}
               onClick={() => onUpdateBeats(chord.id, b)}

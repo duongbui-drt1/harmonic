@@ -3,7 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <title>HarmonicX - Chord Progression Analyzer & Composer</title>
+    <script>
+      // Safeguard against polyfills attempting to overwrite window.fetch when it has only a getter
+      (function() {
+        try {
+          var nativeFetch = window.fetch;
+          if (nativeFetch) {
+            var _activeFetch = nativeFetch;
+            try {
+              Object.defineProperty(window, 'fetch', {
+                get: function() { return _activeFetch; },
+                set: function(fn) { _activeFetch = fn; },
+                configurable: true,
+                enumerable: true
+              });
+            } catch (e) {
+              // Ignore if already locked
+            }
+          }
+        } catch (err) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

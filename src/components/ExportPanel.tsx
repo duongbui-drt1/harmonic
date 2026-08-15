@@ -1,17 +1,22 @@
 import React, { useState } from "react";
 import { Midi } from "@tonejs/midi";
-import { ChordItem, InstrumentType } from "../types";
+import { ChordItem, InstrumentType, TimeSignatureString, ArpeggioSettings } from "../types";
 import { KeyResult } from "../utils/keyDetection";
 import { renderProgressionToWav } from "../utils/wavExporter";
-import { Download, Printer, Copy, Check, Music, Loader2, FileText } from "lucide-react";
+import { TimeSignature, RhythmRegistry } from "../music/rhythm";
+import { ArpeggiatorEngine } from "../music/arpeggio";
+import { Download, Printer, Copy, Check, Music, Loader2, FileText, Clock, Sparkles } from "lucide-react";
 
 interface ExportPanelProps {
   chords: ChordItem[];
   detectedKey?: KeyResult;
   keyName?: string;
   bpm: number;
-  timeSignature?: string;
+  timeSignature?: TimeSignatureString;
+  timeSignatureGrouping?: number[];
+  timeSignatureModel?: TimeSignature;
   instrument?: InstrumentType;
+  arpeggioSettings?: ArpeggioSettings;
   onShowToast?: (msg: string) => void;
 }
 
@@ -20,7 +25,11 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   detectedKey,
   keyName,
   bpm,
+  timeSignature = "4/4",
+  timeSignatureGrouping,
+  timeSignatureModel,
   instrument = "piano",
+  arpeggioSettings,
   onShowToast,
 }) => {
   const [copied, setCopied] = useState(false);
@@ -28,6 +37,10 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
 
   const activeKeyName = keyName || detectedKey?.displayName || (detectedKey?.key ? `${detectedKey.key} Major` : "C Major");
   const activeKeyRoot = detectedKey?.key || activeKeyName.split(" ")[0] || "C";
+
+  const resolvedTimeSignature =
+    timeSignatureModel ||
+    RhythmRegistry.getTimeSignature(timeSignature, timeSignatureGrouping);
 
   // 1. Export WAV Audio File
   const handleExportWav = async () => {
@@ -38,11 +51,19 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
       onShowToast?.("Đang xuất âm thanh WAV chất lượng cao...");
 
       const inst = (instrument as InstrumentType) || "piano";
-      const wavBlob = await renderProgressionToWav(chords, bpm, inst);
+      const wavBlob = await renderProgressionToWav(
+        chords,
+        bpm,
+        inst,
+        resolvedTimeSignature,
+        timeSignatureGrouping,
+        arpeggioSettings
+      );
       const url = URL.createObjectURL(wavBlob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `hoa_am_${activeKeyRoot.replace(/\s+/g, "_")}_${bpm}bpm.wav`;
+      const arpTag = arpeggioSettings?.enabled ? `_arp_${arpeggioSettings.pattern}` : "";
+      a.download = `hoa_am_${activeKeyRoot.replace(/\s+/g, "_")}_${resolvedTimeSignature.name.replace("/", "-")}_${bpm}bpm${arpTag}.wav`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -64,24 +85,62 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
     try {
       const midi = new Midi();
       midi.header.setTempo(bpm);
+      
+      // Add exact time signature meta-event
+      try {
+        midi.header.timeSignatures = [
+          {
+            ticks: 0,
+            timeSignature: [resolvedTimeSignature.numerator, resolvedTimeSignature.denominator],
+            measures: 0,
+          },
+        ];
+      } catch (e) {}
+
       const track = midi.addTrack();
-      track.name = "Chord Progression";
+      const isArp = arpeggioSettings?.enabled && arpeggioSettings.pattern !== "off";
+      track.name = isArp
+        ? `Chord Arpeggio (${arpeggioSettings.pattern} - ${resolvedTimeSignature.name})`
+        : `Chord Progression (${resolvedTimeSignature.name})`;
 
       let currentTime = 0; // seconds
-      const secondsPerBeat = 60 / bpm;
 
       chords.forEach((chord) => {
-        const chordDurationSeconds = chord.beats * secondsPerBeat;
-        const midis = chord.midiNotes && chord.midiNotes.length > 0 ? chord.midiNotes : [60, 64, 67];
+        const chordDurationSeconds = resolvedTimeSignature.getChordDurationInSeconds(chord.beats, bpm);
 
-        midis.forEach((midiNote) => {
-          track.addNote({
-            midi: midiNote,
-            time: currentTime,
-            duration: chordDurationSeconds,
-            velocity: 0.8,
+        if (isArp && arpeggioSettings) {
+          const arpEvents = ArpeggiatorEngine.generateArpeggioEvents(
+            chord,
+            chordDurationSeconds,
+            bpm,
+            arpeggioSettings
+          );
+
+          arpEvents.forEach((ev) => {
+            track.addNote({
+              midi: ev.midi,
+              time: currentTime + ev.timeOffsetSeconds,
+              duration: ev.durationSeconds,
+              velocity: ev.velocity,
+            });
           });
-        });
+        } else {
+          const midis = chord.midiNotes && chord.midiNotes.length > 0 ? chord.midiNotes : [60, 64, 67];
+          const baseVel = chord.velocity !== undefined ? chord.velocity / 100 : 0.8;
+          const baseSustain = chord.sustain !== undefined ? chord.sustain / 100 : 1.0;
+
+          midis.forEach((midiNote) => {
+            const noteVel = chord.noteVelocities?.[midiNote] !== undefined ? chord.noteVelocities[midiNote] / 100 : baseVel;
+            const noteSus = chord.noteSustains?.[midiNote] !== undefined ? chord.noteSustains[midiNote] / 100 : baseSustain;
+
+            track.addNote({
+              midi: midiNote,
+              time: currentTime,
+              duration: chordDurationSeconds * noteSus,
+              velocity: noteVel,
+            });
+          });
+        }
 
         currentTime += chordDurationSeconds;
       });
@@ -91,7 +150,8 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `hoa_am_${activeKeyRoot.replace(/\s+/g, "_")}_${bpm}bpm.mid`;
+      const arpTag = isArp ? `_arp_${arpeggioSettings?.pattern}` : "";
+      a.download = `hoa_am_${activeKeyRoot.replace(/\s+/g, "_")}_${resolvedTimeSignature.name.replace("/", "-")}_${bpm}bpm${arpTag}.mid`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -109,7 +169,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
     if (chords.length === 0) return;
 
     const chordStr = chords.map((c) => c.name).join(" - ");
-    const text = `${chordStr} (Giọng ${activeKeyName}, Tempo ${bpm} BPM)`;
+    const text = `${chordStr} (Giọng ${activeKeyName}, Nhịp ${resolvedTimeSignature.formatMeter()}, Tempo ${bpm} BPM)`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -118,127 +178,101 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   };
 
   // 4. Print Printable Lead Sheet / Phổ Nhạc
-  const handlePrintSheet = () => {
-    if (chords.length === 0) return;
-
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    const chordsHtml = chords
-      .map(
-        (c) => `
-      <div style="border: 2px solid #cbd5e1; border-radius: 10px; padding: 14px; width: 130px; text-align: center; background: #f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-        <div style="font-size: 24px; font-weight: 800; color: #1e1b4b; font-family: monospace; margin-bottom: 4px;">${c.name}</div>
-        <div style="font-size: 14px; color: #6366f1; font-weight: 700;">${c.romanNumeral || "—"}</div>
-        <div style="font-size: 11px; color: #64748b; margin-top: 6px; font-weight: 600;">${c.beats} nhịp</div>
-        <div style="font-size: 10px; color: #94a3b8; font-family: monospace; margin-top: 4px;">[${(c.notes || []).join(", ")}]</div>
-      </div>
-    `
-      )
-      .join("");
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Bản Phổ Nhạc - Giọng ${activeKeyName}</title>
-          <style>
-            body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; padding: 40px; color: #0f172a; background: #fff; }
-            .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
-            h1 { font-size: 28px; font-weight: 800; margin: 0; color: #1e1b4b; }
-            .meta { font-size: 14px; color: #475569; margin-top: 6px; }
-            .badge { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-left: 8px; }
-            .grid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 20px; }
-            .footer { margin-top: 40px; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <h1>BẢN PHỔ NHẠC HÒA ÂM (LEAD SHEET)</h1>
-              <div class="meta">
-                Giọng chính: <strong>${activeKeyName}</strong>
-                <span class="badge">${bpm} BPM</span>
-                <span class="badge">4/4 Time Signature</span>
-              </div>
-            </div>
-            <div style="font-size: 12px; color: #64748b; text-align: right;">
-              Tổng hợp âm: <strong>${chords.length}</strong><br/>
-              Phát hành bởi: Harmonics Studio
-            </div>
-          </div>
-
-          <h3 style="font-size: 14px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">
-            Sơ Đồ Chuỗi Hợp Âm & Phân Tích
-          </h3>
-          <div class="grid">
-            ${chordsHtml}
-          </div>
-
-          <div class="footer">
-            Phổ Nhạc Hoà Âm Harmonics Studio • Tạo tự động bởi Harmonics Composer Engine
-          </div>
-
-          <script>
-            window.onload = function() { window.print(); }
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+  const handlePrintLeadSheet = () => {
+    window.print();
   };
 
   return (
-    <div className="bg-[#1a1a24] border border-[#2d2d3d] rounded-xl p-5 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 transition-all">
-      <div>
-        <label className="text-[10px] font-bold text-[#7c5cbf] uppercase tracking-widest block mb-0.5">
-          Xuất & Chia Sẻ (Export & Share)
-        </label>
-        <h3 className="text-base font-bold text-white flex items-center gap-2">
-          Tùy Chọn Xuất Phổ Nhạc & Âm Thanh <FileText className="w-4 h-4 text-[#a88beb]" />
-        </h3>
-        <p className="text-xs text-gray-400">
-          Xuất nhạc WAV, tải file MIDI cho phần mềm làm nhạc (DAW), in phổ nhạc lead sheet hoặc sao chép văn bản.
-        </p>
+    <div className="bg-[#1a1a24] border border-[#2d2d3d] rounded-xl p-4 shadow-xl">
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#2d2d3d]">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-[#7c5cbf]/20 text-[#a88beb]">
+            <Download className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white">Xuất File & Chia Sẻ (Export)</h3>
+            <p className="text-[11px] text-gray-400">
+              Xuất MIDI cho DAW (FL Studio, Logic, Ableton), file âm thanh WAV hoặc in bản phổ nhạc
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-gray-400">
+          <Clock className="w-3.5 h-3.5 text-[#a88beb]" />
+          <span>{resolvedTimeSignature.formatMeter()} · {bpm} BPM</span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <button
-          onClick={handleCopyText}
-          disabled={chords.length === 0}
-          className="px-3.5 py-1.5 bg-[#252533] hover:bg-[#323245] text-gray-200 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 border border-[#3d3d52] disabled:opacity-40 transition"
-        >
-          {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? "Đã chép!" : "Chép Văn Bản"}
-        </button>
-
-        <button
-          onClick={handlePrintSheet}
-          disabled={chords.length === 0}
-          className="px-3.5 py-1.5 bg-[#252533] hover:bg-[#323245] text-gray-200 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 border border-[#3d3d52] disabled:opacity-40 transition"
-        >
-          <Printer className="w-3.5 h-3.5 text-[#a88beb]" /> Xuất Phổ Nhạc
-        </button>
-
-        <button
-          onClick={handleExportWav}
-          disabled={chords.length === 0 || isExportingWav}
-          className="px-3.5 py-1.5 bg-[#252533] hover:bg-[#323245] text-gray-200 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 border border-[#3d3d52] disabled:opacity-40 transition"
-        >
-          {isExportingWav ? (
-            <Loader2 className="w-3.5 h-3.5 text-[#a88beb] animate-spin" />
-          ) : (
-            <Music className="w-3.5 h-3.5 text-[#a88beb]" />
-          )}
-          {isExportingWav ? "Đang Xuất WAV..." : "Xuất File WAV"}
-        </button>
-
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        {/* MIDI Export */}
         <button
           onClick={handleExportMidi}
           disabled={chords.length === 0}
-          className="px-4 py-1.5 bg-[#7c5cbf] hover:bg-[#8e6fd1] text-white text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 shadow-md disabled:opacity-40 transition"
+          className="p-3 bg-[#0f0f13] hover:bg-[#252533] border border-[#2d2d3d] hover:border-[#7c5cbf] rounded-xl flex flex-col items-center justify-center gap-2 text-center group disabled:opacity-40 transition"
+          title="Tải file MIDI đa bè hỗ trợ mọi DAW"
         >
-          <Download className="w-3.5 h-3.5" /> Xuất File MIDI
+          <div className="w-8 h-8 rounded-lg bg-[#7c5cbf]/10 group-hover:bg-[#7c5cbf]/20 text-[#a88beb] flex items-center justify-center transition">
+            <Music className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white group-hover:text-[#a88beb] transition">
+              Xuất MIDI (.mid)
+            </div>
+            <div className="text-[10px] text-gray-400">Tempo & TimeSig chuẩn</div>
+          </div>
+        </button>
+
+        {/* WAV Export */}
+        <button
+          onClick={handleExportWav}
+          disabled={chords.length === 0 || isExportingWav}
+          className="p-3 bg-[#0f0f13] hover:bg-[#252533] border border-[#2d2d3d] hover:border-[#7c5cbf] rounded-xl flex flex-col items-center justify-center gap-2 text-center group disabled:opacity-40 transition"
+          title="Thu âm offline chất lượng phòng thu thành file WAV"
+        >
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center transition">
+            {isExportingWav ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white group-hover:text-emerald-400 transition">
+              {isExportingWav ? "Đang xuất..." : "Xuất Audio WAV"}
+            </div>
+            <div className="text-[10px] text-gray-400">16-bit 44.1kHz PCM</div>
+          </div>
+        </button>
+
+        {/* Copy Text */}
+        <button
+          onClick={handleCopyText}
+          disabled={chords.length === 0}
+          className="p-3 bg-[#0f0f13] hover:bg-[#252533] border border-[#2d2d3d] hover:border-[#7c5cbf] rounded-xl flex flex-col items-center justify-center gap-2 text-center group disabled:opacity-40 transition"
+          title="Sao chép tên hợp âm để dán vào tài liệu"
+        >
+          <div className="w-8 h-8 rounded-lg bg-blue-500/10 group-hover:bg-blue-500/20 text-blue-400 flex items-center justify-center transition">
+            {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white group-hover:text-blue-400 transition">
+              {copied ? "Đã sao chép!" : "Sao chép Text"}
+            </div>
+            <div className="text-[10px] text-gray-400">Chuỗi ký hiệu hợp âm</div>
+          </div>
+        </button>
+
+        {/* Print Lead Sheet */}
+        <button
+          onClick={handlePrintLeadSheet}
+          disabled={chords.length === 0}
+          className="p-3 bg-[#0f0f13] hover:bg-[#252533] border border-[#2d2d3d] hover:border-[#7c5cbf] rounded-xl flex flex-col items-center justify-center gap-2 text-center group disabled:opacity-40 transition"
+          title="In hoặc lưu PDF bản phổ nhạc (Lead Sheet)"
+        >
+          <div className="w-8 h-8 rounded-lg bg-amber-500/10 group-hover:bg-amber-500/20 text-amber-400 flex items-center justify-center transition">
+            <Printer className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white group-hover:text-amber-400 transition">
+              In Lead Sheet (PDF)
+            </div>
+            <div className="text-[10px] text-gray-400">Bản phổ nhạc chuẩn</div>
+          </div>
         </button>
       </div>
     </div>

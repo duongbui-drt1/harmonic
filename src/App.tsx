@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { ChordItem, InstrumentType, Progression, PresetProgression, AppTheme } from "./types";
+import { ChordItem, InstrumentType, Progression, PresetProgression, AppTheme, TimeSignatureString, ArpeggioSettings } from "./types";
+import { DEFAULT_ARPEGGIO_SETTINGS } from "./music/arpeggio";
 import { parseChordName, getChordNotes } from "./utils/chordData";
 import { useAudioEngine } from "./hooks/useAudioEngine";
 import { useChordHistory } from "./hooks/useChordHistory";
@@ -15,6 +16,7 @@ import { SheetNotation } from "./components/SheetNotation";
 import { SavedProjectsModal } from "./components/SavedProjectsModal";
 import { AccessibilityModal } from "./components/AccessibilityModal";
 import { NoteVelocityModal } from "./components/NoteVelocityModal";
+import { MidiSettingsModal } from "./components/MidiSettingsModal";
 import { Toast } from "./components/Toast";
 import { Sidebar } from "./components/Sidebar";
 
@@ -24,9 +26,11 @@ import { MutatorAndWhatIfLab } from "./components/MutatorAndWhatIfLab";
 import { DoctorAndModulationLab } from "./components/DoctorAndModulationLab";
 import { GenreAndStyleLab } from "./components/GenreAndStyleLab";
 import { MidiAnalyzerLab } from "./components/MidiAnalyzerLab";
+import { LyriaPreview } from "./components/LyriaPreview";
+import { LearningMode } from "./components/learning/LearningMode";
 
 import { printHarmonicReport } from "./utils/reportExporter";
-import { Menu, Music, Sparkles, Folder, Printer, Eye, RotateCcw, RotateCw } from "lucide-react";
+import { Menu, Music, Sparkles, Folder, Printer, Eye, RotateCcw, RotateCw, GraduationCap, Piano } from "lucide-react";
 
 export default function App() {
   // Load cached auto-save state from localStorage
@@ -59,11 +63,15 @@ export default function App() {
   );
 
   const [bpm, setBpm] = useState<number>(cachedData?.bpm ?? 90);
-  const [timeSignature, setTimeSignature] = useState<"3/4" | "4/4" | "6/8">(cachedData?.timeSignature ?? "4/4");
+  const [timeSignature, setTimeSignature] = useState<TimeSignatureString>(cachedData?.timeSignature ?? "4/4");
+  const [timeSignatureGrouping, setTimeSignatureGrouping] = useState<number[] | undefined>(cachedData?.timeSignatureGrouping);
   const [instrument, setInstrument] = useState<InstrumentType>(cachedData?.instrument ?? "piano");
   const [volume, setVolume] = useState<number>(cachedData?.volume ?? 80);
   const [loop, setLoop] = useState<boolean>(cachedData?.loop ?? true);
   const [metronome, setMetronome] = useState<boolean>(cachedData?.metronome ?? false);
+  const [arpeggioSettings, setArpeggioSettings] = useState<ArpeggioSettings>(
+    cachedData?.arpeggioSettings ?? DEFAULT_ARPEGGIO_SETTINGS
+  );
 
   // Sidebar toggle state
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -80,7 +88,10 @@ export default function App() {
   // UI Modals, Active Tabs, Theme
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
   const [isA11yModalOpen, setIsA11yModalOpen] = useState(false);
+  const [isMidiModalOpen, setIsMidiModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
+    | "learn"
+    | "lyria_preview"
     | "theory"
     | "voice_leading"
     | "tension_graph"
@@ -91,7 +102,7 @@ export default function App() {
     | "notation"
     | "presets"
     | "ai"
-  >("theory");
+  >("learn");
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [theme, setTheme] = useState<AppTheme>(() => {
@@ -119,10 +130,12 @@ export default function App() {
       chords,
       bpm,
       timeSignature,
+      timeSignatureGrouping,
       instrument,
       volume,
       loop,
       metronome,
+      arpeggioSettings,
       customKey,
       savedAt: Date.now(),
     };
@@ -134,7 +147,7 @@ export default function App() {
     } catch (e) {
       console.error("Auto-save failed:", e);
     }
-  }, [chords, bpm, timeSignature, instrument, volume, loop, metronome, customKey]);
+  }, [chords, bpm, timeSignature, timeSignatureGrouping, instrument, volume, loop, metronome, arpeggioSettings, customKey]);
 
   const activeKey: KeyResult = customKey
     ? {
@@ -159,6 +172,10 @@ export default function App() {
   const {
     isPlaying,
     currentChordIndex,
+    activeBeatIndex,
+    activeSubdivisionIndex,
+    activeAccent,
+    timeSignatureModel,
     isLoading,
     loadingStatus,
     loadingPercent,
@@ -170,11 +187,13 @@ export default function App() {
   } = useAudioEngine({
     bpm,
     timeSignature,
+    timeSignatureGrouping,
     instrument,
     volume,
     loop,
     metronome,
     chords: chordsWithRoman,
+    arpeggioSettings,
   });
 
   const handlePlay = useCallback(() => {
@@ -289,6 +308,7 @@ export default function App() {
         onRedo={handleRedo}
         onOpenSavedModal={() => setIsSavedModalOpen(true)}
         onOpenA11yModal={() => setIsA11yModalOpen(true)}
+        onOpenMidiModal={() => setIsMidiModalOpen(true)}
         onPrintReport={() => printHarmonicReport({ key: activeKey?.displayName || "C Major", bpm, timeSignature, chords: chordsWithRoman })}
       />
 
@@ -320,9 +340,42 @@ export default function App() {
 
           {/* Quick Header Bar Status & Actions */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab("learn")}
+              className={`px-3 py-1.5 text-xs font-black rounded-lg flex items-center gap-1.5 shadow-md transition ${
+                activeTab === "learn"
+                  ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white ring-2 ring-purple-400"
+                  : "bg-[#1f1935] hover:bg-[#2c2448] text-[#c0a8f7] border border-[#7c5cbf]/50"
+              }`}
+            >
+              <GraduationCap className="w-4 h-4 text-amber-300" />
+              <span>🎓 Học Nhạc / Learn</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("lyria_preview")}
+              className={`px-3 py-1.5 text-xs font-black rounded-lg flex items-center gap-1.5 shadow-md transition ${
+                activeTab === "lyria_preview"
+                  ? "bg-gradient-to-r from-[#7c5cbf] to-[#6366f1] text-white ring-1 ring-[#7c5cbf]"
+                  : "bg-[#221c38] hover:bg-[#2c2448] text-[#a88beb] border border-[#7c5cbf]/40"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>✨ Lyria Preview</span>
+            </button>
+
             <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 bg-[#1a1a24] border border-[#2d2d3d] text-xs font-mono font-bold text-indigo-300 rounded-lg">
               Key: {activeKey?.displayName || "C Major"}
             </span>
+
+            <button
+              onClick={() => setIsMidiModalOpen(true)}
+              className="px-3 py-1.5 bg-[#252533] hover:bg-[#323245] text-purple-300 hover:text-white text-xs font-bold rounded-lg flex items-center gap-1.5 border border-[#3d3d52] transition shadow-sm"
+              title="Cài đặt và giám sát MIDI Controller"
+            >
+              <Piano className="w-3.5 h-3.5 text-purple-400" />
+              <span className="hidden sm:inline">MIDI</span>
+            </button>
 
             <button
               onClick={() => printHarmonicReport({ key: activeKey?.displayName || "C Major", bpm, timeSignature, chords: chordsWithRoman })}
@@ -335,229 +388,277 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 pt-6 space-y-6">
-        {/* Interactive Piano Keyboard */}
-        <section className="bg-[#161622] border border-[#2d2d3d] rounded-2xl p-4 shadow-2xl">
-          <PianoKeyboard
-            onPlayNote={(note) => playNotePreview(note)}
-            onAddChord={(chord) => {
-              setChords((prev) => [...prev, chord]);
-              showToast(`Đã thêm hợp âm: ${chord.name}`);
-            }}
-            onPlayChordPreview={(chord) => playChordPreview(chord)}
-          />
-        </section>
-
-        {/* Timeline & Playback Controls */}
-        <section className="space-y-4">
-          <PlaybackControls
-            isPlaying={isPlaying}
-            onPlay={play}
-            onPause={pause}
-            onStop={stop}
-            bpm={bpm}
-            onChangeBpm={setBpm}
-            onBpmChange={setBpm}
-            timeSignature={timeSignature}
-            onChangeTimeSignature={setTimeSignature}
-            onTimeSignatureChange={setTimeSignature}
-            instrument={instrument}
-            onChangeInstrument={setInstrument}
-            onInstrumentChange={setInstrument}
-            volume={volume}
-            onChangeVolume={setVolume}
-            onVolumeChange={setVolume}
-            loop={loop}
-            onToggleLoop={() => setLoop(!loop)}
-            onLoopChange={setLoop}
-            metronome={metronome}
-            onToggleMetronome={() => setMetronome(!metronome)}
-            onMetronomeChange={setMetronome}
-            isLoading={isLoading}
-            loadingStatus={loadingStatus}
-            loadingPercent={loadingPercent}
-          />
-
-          <ProgressionTimeline
-            chords={chordsWithRoman}
-            detectedKey={activeKey}
-            customKey={customKey}
-            onSetCustomKey={setCustomKey}
-            playingIndex={currentChordIndex}
-            selectedChordForDetails={selectedChordForDetails}
-            onDeleteChord={(id) => setChords((prev) => prev.filter((c) => c.id !== id))}
-            onUpdateBeats={(id, beats) => setChords((prev) => prev.map((c) => (c.id === id ? { ...c, beats } : c)))}
-            onMoveChord={(index, direction) => {
-              const target = index + direction;
-              if (target < 0 || target >= chords.length) return;
-              const next = [...chords];
-              const [moved] = next.splice(index, 1);
-              next.splice(target, 0, moved);
-              setChords(next);
-            }}
-            onPlayPreview={playChordPreview}
-            onSelectChordForDetails={(chord) => setSelectedChordForDetails(chord)}
-            onOpenVelocityModal={(chord) => setVelocityModalChord(chord)}
-            onClearTimeline={() => setChords([])}
-            onSetChords={setChords}
-            onOpenPresetLibrary={() => setActiveTab("presets")}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            canUndo={canUndo}
-            canRedo={canRedo}
-          />
-        </section>
-
-        {/* Module Content Area */}
-        <section className="space-y-6">
-          {activeTab === "theory" && (
-            <ChordTheoryPanel
-              chords={chordsWithRoman}
-              selectedChord={selectedChordForDetails || chordsWithRoman[0] || null}
-              activeKey={activeKey?.displayName || "C Major"}
-              onSelectChord={(chord) => setSelectedChordForDetails(chord)}
-              onPlayPreview={(chord) => playChordPreview(chord)}
-              onPlaySequence={handlePlay}
-            />
-          )}
-
-          {activeTab === "voice_leading" && (
-            <VoiceLeadingLab chords={chordsWithRoman} onPlayPreview={playChordPreview} />
-          )}
-
-          {activeTab === "tension_graph" && (
-            <TensionAndGraphLab chords={chordsWithRoman} keyName={activeKey?.displayName || "C Major"} />
-          )}
-
-          {activeTab === "mutator_whatif" && (
-            <MutatorAndWhatIfLab
-              chords={chordsWithRoman}
-              keyName={activeKey?.displayName || "C Major"}
-              onApplyMutation={(newChords) => {
-                setChords(
-                  newChords.map((c, idx) => {
-                    const parsed = parseChordName(c.name);
-                    const root = parsed ? parsed.root : "C";
-                    const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
-                    const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
-                    return {
-                      id: `mutated-${idx}-${Date.now()}`,
-                      name: c.name,
-                      root,
-                      quality: parsed ? parsed.qualityDef.quality : "major",
-                      beats: c.beats || 4,
-                      notes: noteNames,
-                      midiNotes,
-                    };
-                  })
-                );
-                showToast("Đã áp dụng biến thể hòa âm mới!");
+      {activeTab === "learn" ? (
+        <main className="max-w-7xl mx-auto px-4 pt-6">
+          <LearningMode />
+        </main>
+      ) : (
+        <main className="max-w-7xl mx-auto px-4 pt-6 space-y-6">
+          {/* Interactive Piano Keyboard */}
+          <section className="bg-[#161622] border border-[#2d2d3d] rounded-2xl p-4 shadow-2xl">
+            <PianoKeyboard
+              onPlayNote={(note) => playNotePreview(note)}
+              onAddChord={(chord) => {
+                setChords((prev) => [...prev, chord]);
+                showToast(`Đã thêm hợp âm: ${chord.name}`);
               }}
+              onPlayChordPreview={(chord) => playChordPreview(chord)}
             />
-          )}
+          </section>
 
-          {activeTab === "doctor_modulation" && (
-            <DoctorAndModulationLab chords={chordsWithRoman} keyName={activeKey?.displayName || "C Major"} />
-          )}
-
-          {activeTab === "genre_dna" && (
-            <GenreAndStyleLab
-              chords={chordsWithRoman}
-              keyName={activeKey?.displayName || "C Major"}
-              onApplyMakeItMore={(newChords) => {
-                setChords(
-                  newChords.map((c, idx) => {
-                    const parsed = parseChordName(c.name);
-                    const root = parsed ? parsed.root : "C";
-                    const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
-                    const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
-                    return {
-                      id: `genre-${idx}-${Date.now()}`,
-                      name: c.name,
-                      root,
-                      quality: parsed ? parsed.qualityDef.quality : "major",
-                      beats: c.beats || 4,
-                      notes: noteNames,
-                      midiNotes,
-                    };
-                  })
-                );
-                showToast("Đã áp dụng chuyển đổi cảm xúc hợp âm!");
-              }}
-            />
-          )}
-
-          {activeTab === "midi_analyzer" && (
-            <MidiAnalyzerLab
-              onImportMidiChords={(importedChords, midiBpm) => {
-                setChords(
-                  importedChords.map((c, idx) => {
-                    const parsed = parseChordName(c.name);
-                    const root = parsed ? parsed.root : "C";
-                    const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
-                    const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
-                    return {
-                      id: `midi-${idx}-${Date.now()}`,
-                      name: c.name,
-                      root,
-                      quality: parsed ? parsed.qualityDef.quality : "major",
-                      beats: c.beats || 4,
-                      notes: noteNames,
-                      midiNotes,
-                    };
-                  })
-                );
-                setBpm(midiBpm);
-                showToast(`Đã nhập thành công ${importedChords.length} hợp âm từ MIDI!`);
-              }}
-            />
-          )}
-
-          {activeTab === "notation" && (
-            <SheetNotation chords={chordsWithRoman} keyName={activeKey?.displayName || "C Major"} bpm={bpm} />
-          )}
-
-          {activeTab === "presets" && <PresetLibrary onSelectPreset={handleSelectPreset} />}
-
-          {activeTab === "ai" && (
-            <AIAssistant
-              chords={chordsWithRoman}
-              keyName={activeKey?.displayName || "C Major"}
+          {/* Timeline & Playback Controls */}
+          <section className="space-y-4">
+            <PlaybackControls
+              isPlaying={isPlaying}
+              onPlay={play}
+              onPause={pause}
+              onStop={stop}
               bpm={bpm}
-              onApplySuggestion={(suggestedChords) => {
-                setChords(
-                  suggestedChords.map((c, idx) => {
-                    const parsed = parseChordName(c.name);
-                    const root = parsed ? parsed.root : "C";
-                    const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
-                    const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
-                    return {
-                      id: `ai-${idx}-${Date.now()}`,
-                      name: c.name,
-                      root,
-                      quality: parsed ? parsed.qualityDef.quality : "major",
-                      beats: c.beats || 4,
-                      notes: noteNames,
-                      midiNotes,
-                    };
-                  })
-                );
-                showToast("Đã áp dụng gợi ý từ AI Co-Pilot!");
+              onChangeBpm={setBpm}
+              onBpmChange={setBpm}
+              timeSignature={timeSignature}
+              timeSignatureGrouping={timeSignatureGrouping}
+              timeSignatureModel={timeSignatureModel}
+              activeBeatIndex={activeBeatIndex}
+              activeSubdivisionIndex={activeSubdivisionIndex}
+              activeAccent={activeAccent}
+              onChangeTimeSignature={(ts, grp) => {
+                setTimeSignature(ts);
+                setTimeSignatureGrouping(grp);
               }}
+              onTimeSignatureChange={(ts, grp) => {
+                setTimeSignature(ts);
+                setTimeSignatureGrouping(grp);
+              }}
+              instrument={instrument}
+              onChangeInstrument={setInstrument}
+              onInstrumentChange={setInstrument}
+              volume={volume}
+              onChangeVolume={setVolume}
+              onVolumeChange={setVolume}
+              loop={loop}
+              onToggleLoop={() => setLoop(!loop)}
+              onLoopChange={setLoop}
+              metronome={metronome}
+              onToggleMetronome={() => setMetronome(!metronome)}
+              onMetronomeChange={setMetronome}
+              isLoading={isLoading}
+              loadingStatus={loadingStatus}
+              loadingPercent={loadingPercent}
+              arpeggioSettings={arpeggioSettings}
+              sampleChord={chordsWithRoman[0] || chords[0]}
+              onChangeArpeggioSettings={setArpeggioSettings}
+              onPreviewArpeggio={(chord, inst) => playChordPreview(chord, inst, true)}
+              onOpenMidiModal={() => setIsMidiModalOpen(true)}
             />
-          )}
 
-          {/* Export Panel */}
-          <ExportPanel
-            chords={chordsWithRoman}
-            bpm={bpm}
-            timeSignature={timeSignature}
-            keyName={activeKey?.displayName || "C Major"}
-            detectedKey={activeKey}
-            onShowToast={showToast}
-          />
-        </section>
-      </main>
+            <ProgressionTimeline
+              chords={chordsWithRoman}
+              detectedKey={activeKey}
+              timeSignature={timeSignature}
+              timeSignatureGrouping={timeSignatureGrouping}
+              timeSignatureModel={timeSignatureModel}
+              bpm={bpm}
+              customKey={customKey}
+              onSetCustomKey={setCustomKey}
+              playingIndex={currentChordIndex}
+              selectedChordForDetails={selectedChordForDetails}
+              onDeleteChord={(id) => setChords((prev) => prev.filter((c) => c.id !== id))}
+              onUpdateBeats={(id, beats) => setChords((prev) => prev.map((c) => (c.id === id ? { ...c, beats } : c)))}
+              onMoveChord={(index, direction) => {
+                const target = index + direction;
+                if (target < 0 || target >= chords.length) return;
+                const next = [...chords];
+                const [moved] = next.splice(index, 1);
+                next.splice(target, 0, moved);
+                setChords(next);
+              }}
+              onPlayPreview={playChordPreview}
+              onSelectChordForDetails={(chord) => setSelectedChordForDetails(chord)}
+              onOpenVelocityModal={(chord) => setVelocityModalChord(chord)}
+              onClearTimeline={() => setChords([])}
+              onSetChords={setChords}
+              onOpenPresetLibrary={() => setActiveTab("presets")}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              canUndo={canUndo}
+              canRedo={canRedo}
+            />
+          </section>
+
+          {/* Module Content Area */}
+          <section className="space-y-6">
+            {activeTab === "lyria_preview" && (
+              <LyriaPreview
+                chords={chordsWithRoman}
+                keyName={activeKey?.displayName || "C Major"}
+                bpm={bpm}
+                timeSignature={timeSignature}
+                onExactPlayback={handlePlay}
+                isPlayingExact={isPlaying}
+              />
+            )}
+
+            {activeTab === "theory" && (
+              <ChordTheoryPanel
+                chords={chordsWithRoman}
+                selectedChord={selectedChordForDetails || chordsWithRoman[0] || null}
+                activeKey={activeKey?.displayName || "C Major"}
+                onSelectChord={(chord) => setSelectedChordForDetails(chord)}
+                onPlayPreview={(chord) => playChordPreview(chord)}
+                onPlaySequence={handlePlay}
+              />
+            )}
+
+            {activeTab === "voice_leading" && (
+              <VoiceLeadingLab chords={chordsWithRoman} onPlayPreview={playChordPreview} />
+            )}
+
+            {activeTab === "tension_graph" && (
+              <TensionAndGraphLab chords={chordsWithRoman} keyName={activeKey?.displayName || "C Major"} />
+            )}
+
+            {activeTab === "mutator_whatif" && (
+              <MutatorAndWhatIfLab
+                chords={chordsWithRoman}
+                keyName={activeKey?.displayName || "C Major"}
+                onApplyMutation={(newChords) => {
+                  setChords(
+                    newChords.map((c, idx) => {
+                      const parsed = parseChordName(c.name);
+                      const root = parsed ? parsed.root : "C";
+                      const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
+                      const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
+                      return {
+                        id: `mutated-${idx}-${Date.now()}`,
+                        name: c.name,
+                        root,
+                        quality: parsed ? parsed.qualityDef.quality : "major",
+                        beats: c.beats || 4,
+                        notes: noteNames,
+                        midiNotes,
+                      };
+                    })
+                  );
+                  showToast("Đã áp dụng biến thể hòa âm mới!");
+                }}
+              />
+            )}
+
+            {activeTab === "doctor_modulation" && (
+              <DoctorAndModulationLab chords={chordsWithRoman} keyName={activeKey?.displayName || "C Major"} />
+            )}
+
+            {activeTab === "genre_dna" && (
+              <GenreAndStyleLab
+                chords={chordsWithRoman}
+                keyName={activeKey?.displayName || "C Major"}
+                onApplyMakeItMore={(newChords) => {
+                  setChords(
+                    newChords.map((c, idx) => {
+                      const parsed = parseChordName(c.name);
+                      const root = parsed ? parsed.root : "C";
+                      const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
+                      const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
+                      return {
+                        id: `genre-${idx}-${Date.now()}`,
+                        name: c.name,
+                        root,
+                        quality: parsed ? parsed.qualityDef.quality : "major",
+                        beats: c.beats || 4,
+                        notes: noteNames,
+                        midiNotes,
+                      };
+                    })
+                  );
+                  showToast("Đã áp dụng chuyển đổi cảm xúc hợp âm!");
+                }}
+              />
+            )}
+
+            {activeTab === "midi_analyzer" && (
+              <MidiAnalyzerLab
+                onImportMidiChords={(importedChords, midiBpm) => {
+                  setChords(
+                    importedChords.map((c, idx) => {
+                      const parsed = parseChordName(c.name);
+                      const root = parsed ? parsed.root : "C";
+                      const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
+                      const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
+                      return {
+                        id: `midi-${idx}-${Date.now()}`,
+                        name: c.name,
+                        root,
+                        quality: parsed ? parsed.qualityDef.quality : "major",
+                        beats: c.beats || 4,
+                        notes: noteNames,
+                        midiNotes,
+                      };
+                    })
+                  );
+                  setBpm(midiBpm);
+                  showToast(`Đã nhập thành công ${importedChords.length} hợp âm từ MIDI!`);
+                }}
+              />
+            )}
+
+            {activeTab === "notation" && (
+              <SheetNotation
+                chords={chordsWithRoman}
+                keyName={activeKey?.displayName || "C Major"}
+                bpm={bpm}
+                timeSignature={timeSignature}
+                timeSignatureGrouping={timeSignatureGrouping}
+                timeSignatureModel={timeSignatureModel}
+              />
+            )}
+
+            {activeTab === "presets" && <PresetLibrary onSelectPreset={handleSelectPreset} />}
+
+            {activeTab === "ai" && (
+              <AIAssistant
+                chords={chordsWithRoman}
+                keyName={activeKey?.displayName || "C Major"}
+                bpm={bpm}
+                onApplySuggestion={(suggestedChords) => {
+                  setChords(
+                    suggestedChords.map((c, idx) => {
+                      const parsed = parseChordName(c.name);
+                      const root = parsed ? parsed.root : "C";
+                      const intervals = parsed ? parsed.qualityDef.intervals : [0, 4, 7];
+                      const { noteNames, midiNotes } = getChordNotes(root, intervals, 3);
+                      return {
+                        id: `ai-${idx}-${Date.now()}`,
+                        name: c.name,
+                        root,
+                        quality: parsed ? parsed.qualityDef.quality : "major",
+                        beats: c.beats || 4,
+                        notes: noteNames,
+                        midiNotes,
+                      };
+                    })
+                  );
+                  showToast("Đã áp dụng gợi ý từ AI Co-Pilot!");
+                }}
+              />
+            )}
+
+            {/* Export Panel */}
+            <ExportPanel
+              chords={chordsWithRoman}
+              bpm={bpm}
+              timeSignature={timeSignature}
+              timeSignatureGrouping={timeSignatureGrouping}
+              timeSignatureModel={timeSignatureModel}
+              instrument={instrument}
+              keyName={activeKey?.displayName || "C Major"}
+              detectedKey={activeKey}
+              arpeggioSettings={arpeggioSettings}
+              onShowToast={showToast}
+            />
+          </section>
+        </main>
+      )}
 
       {/* Modals */}
       {isSavedModalOpen && (
@@ -579,6 +680,14 @@ export default function App() {
       )}
 
       {isA11yModalOpen && <AccessibilityModal isOpen={isA11yModalOpen} onClose={() => setIsA11yModalOpen(false)} />}
+
+      {isMidiModalOpen && (
+        <MidiSettingsModal
+          isOpen={isMidiModalOpen}
+          onClose={() => setIsMidiModalOpen(false)}
+          onShowToast={showToast}
+        />
+      )}
 
       {velocityModalChord && (
         <NoteVelocityModal

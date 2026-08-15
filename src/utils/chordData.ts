@@ -203,3 +203,38 @@ export function getPianoVoicing(root: string, intervals: number[]): { noteNames:
 
   return { noteNames, midiNotes: fullMidis };
 }
+
+export function parseChordDefinition(root: string, qualityKeyOrSuffix = "major", baseOctave = 4): {
+  root: string;
+  qualityDef: ChordDefinition;
+  intervals: number[];
+  formula: string;
+  noteNames: string[];
+  midiNotes: number[];
+} {
+  const normKey = qualityKeyOrSuffix.toLowerCase().trim();
+  let foundDef = CHORD_DEFINITIONS.find(
+    (d) => d.quality.toLowerCase() === normKey || d.aliases.map((a) => a.toLowerCase()).includes(normKey)
+  );
+
+  // Fallback matchers (e.g. 'diminished' -> 'dim', 'augmented' -> 'aug', 'dominant 7th' -> '7')
+  if (!foundDef) {
+    if (normKey.includes("dim")) foundDef = CHORD_DEFINITIONS.find((d) => d.quality === "dim");
+    else if (normKey.includes("aug")) foundDef = CHORD_DEFINITIONS.find((d) => d.quality === "aug");
+    else if (normKey === "min" || normKey.includes("minor")) foundDef = CHORD_DEFINITIONS.find((d) => d.quality === "minor");
+    else if (normKey === "maj" || normKey.includes("major")) foundDef = CHORD_DEFINITIONS.find((d) => d.quality === "major");
+    else foundDef = CHORD_DEFINITIONS[0];
+  }
+
+  const qualityDef = foundDef || CHORD_DEFINITIONS[0];
+  const { noteNames, midiNotes } = getChordNotes(root, qualityDef.intervals, baseOctave);
+
+  return {
+    root,
+    qualityDef,
+    intervals: qualityDef.intervals,
+    formula: qualityDef.formula,
+    noteNames,
+    midiNotes,
+  };
+}

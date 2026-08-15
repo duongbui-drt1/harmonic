@@ -1,17 +1,22 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ChordItem } from "../types";
+import { ChordItem, TimeSignatureString } from "../types";
 import { ChordCard } from "./ChordCard";
 import { KeyResult } from "../utils/keyDetection";
 import { Trash2, ArrowUp, ArrowDown, Music, Copy, Sparkles, Undo2, Redo2, Shuffle, Sliders, ChevronDown, Check } from "lucide-react";
 import { parseChordName, getChordNotes } from "../utils/chordData";
 import { NOTE_NAMES_SHARP } from "../utils/noteNames";
 import { transposeProgression } from "../utils/chordTransposer";
+import { TimeSignature, RhythmRegistry } from "../music/rhythm";
 
 const ROOT_NOTES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 
 interface ProgressionTimelineProps {
   chords: ChordItem[];
   detectedKey: KeyResult;
+  timeSignature?: TimeSignatureString;
+  timeSignatureGrouping?: number[];
+  timeSignatureModel?: TimeSignature;
+  bpm?: number;
   customKey?: { root: string; mode: "major" | "minor" } | null;
   onSetCustomKey?: (key: { root: string; mode: "major" | "minor" } | null) => void;
   playingIndex: number | null;
@@ -36,6 +41,10 @@ interface ProgressionTimelineProps {
 export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
   chords = [],
   detectedKey,
+  timeSignature = "4/4",
+  timeSignatureGrouping,
+  timeSignatureModel,
+  bpm = 120,
   customKey = null,
   onSetCustomKey,
   playingIndex,
@@ -56,6 +65,27 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
   pastCount = 0,
   futureCount = 0,
 }) => {
+  const model =
+    timeSignatureModel ||
+    RhythmRegistry.getTimeSignature(timeSignature, timeSignatureGrouping);
+
+  // Dynamic beat options for chords matching the meter
+  const availableBeats = React.useMemo(() => {
+    const num = model.numerator;
+    const den = model.denominator;
+
+    if (num === 4 && den === 4) return [1, 2, 4];
+    if (num === 3 && den === 4) return [1, 2, 3];
+    if (num === 2 && den === 4) return [1, 2];
+    if (num === 6 && den === 8) return [1, 2, 6];
+    if (num === 3 && den === 8) return [1, 2, 3];
+    if (num === 9 && den === 8) return [1, 2, 3];
+    if (num === 12 && den === 8) return [1, 2, 4];
+    if (num === 2 && den === 2) return [1, 2];
+    if (num === 5 && den === 4) return [1, 2, 3, 5];
+    if (num === 7 && den === 8) return [2, 3, 7];
+    return [1, 2, Math.max(2, num)];
+  }, [model]);
   const [isKeyPickerOpen, setIsKeyPickerOpen] = useState(false);
   const keyPickerRef = useRef<HTMLDivElement>(null);
 
@@ -123,7 +153,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
 
   // Shuffle existing chords in the progression
   const handleShuffle = () => {
-    if (chords.length <= 1) return;
+    if (!chords || chords.length <= 1) return;
 
     const shuffled = [...chords];
     // Fisher-Yates algorithm
@@ -140,7 +170,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
     onSetChords(shuffled);
   };
 
-  const totalBeats = chords.reduce((sum, c) => sum + c.beats, 0);
+  const totalBeats = (chords || []).reduce((sum, c) => sum + (c?.beats || 0), 0);
   const safeKey = detectedKey || { key: "C", root: "C", mode: "major", displayName: "C Major" };
 
   return (
@@ -171,7 +201,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
                   </span>
                 ) : (
                   <span className="text-[9px] bg-[#1a1a24] text-gray-400 px-1 py-0.2 rounded font-sans uppercase border border-[#3d3d52]">
-                    Auto
+                    Tự động
                   </span>
                 )}
                 <ChevronDown className="w-3 h-3 text-gray-400" />
@@ -182,7 +212,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
                 <div className="absolute top-full left-0 mt-2 w-72 bg-[#1a1a24] border border-[#3d3d52] rounded-xl shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95">
                   <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-[#2d2d3d]">
                     <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <Sliders className="w-3.5 h-3.5 text-[#7c5cbf]" /> Main Key Signature
+                      <Sliders className="w-3.5 h-3.5 text-[#7c5cbf]" /> Giọng Điệu Chính (Key)
                     </span>
                     <button
                       onClick={() => {
@@ -195,14 +225,14 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
                           : "bg-[#252533] text-gray-300 hover:text-white border border-[#3d3d52]"
                       }`}
                     >
-                      Auto Detect
+                      Tự Động Phát Hiện
                     </button>
                   </div>
 
                   {/* Root Selection */}
                   <div className="mb-3">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
-                      Root Note
+                      Nốt Chủ (Root Note)
                     </label>
                     <div className="grid grid-cols-4 gap-1">
                       {ROOT_NOTES.map((r) => (
@@ -229,7 +259,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
                   {/* Mode Selection */}
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
-                      Tonality / Mode
+                      Điệu Tính (Mode)
                     </label>
                     <div className="grid grid-cols-2 gap-1.5">
                       {(["major", "minor"] as const).map((m) => (
@@ -247,7 +277,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
                               : "bg-[#252533] text-gray-300 hover:bg-[#323245]"
                           }`}
                         >
-                          {m}
+                          {m === "major" ? "Trưởng (Major)" : "Thứ (Minor)"}
                         </button>
                       ))}
                     </div>
@@ -256,7 +286,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
               )}
             </div>
             <span className="text-xs text-gray-400 font-mono">
-              ({chords.length}/16 chords · {totalBeats} beats)
+              ({chords.length}/16 hợp âm · {totalBeats} phách)
             </span>
           </div>
         </div>
@@ -269,7 +299,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
               onClick={onUndo}
               disabled={!canUndo}
               className="px-2.5 py-1.5 hover:bg-[#323245] text-gray-300 disabled:text-gray-600 text-xs font-bold uppercase rounded flex items-center gap-1 transition disabled:cursor-not-allowed"
-              title="Undo last change (Ctrl+Z)"
+              title="Hoàn tác thay đổi vừa thực hiện (Ctrl+Z)"
             >
               <Undo2 className="w-3.5 h-3.5" />
               <span>Undo</span>
@@ -284,7 +314,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
               onClick={onRedo}
               disabled={!canRedo}
               className="px-2.5 py-1.5 hover:bg-[#323245] text-gray-300 disabled:text-gray-600 text-xs font-bold uppercase rounded flex items-center gap-1 transition disabled:cursor-not-allowed"
-              title="Redo change (Ctrl+Y or Cmd+Shift+Z)"
+              title="Làm lại thay đổi (Ctrl+Y / Cmd+Shift+Z)"
             >
               <Redo2 className="w-3.5 h-3.5" />
               <span>Redo</span>
@@ -300,32 +330,32 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
             onClick={handleShuffle}
             disabled={chords.length <= 1}
             className="px-2.5 py-1.5 bg-[#252533] hover:bg-[#323245] text-gray-300 border border-[#3d3d52] text-xs font-bold uppercase rounded flex items-center gap-1.5 disabled:opacity-40 transition"
-            title="Randomly shuffle chord order"
+            title="Trộn ngẫu nhiên thứ tự các hợp âm"
           >
-            <Shuffle className="w-3.5 h-3.5 text-[#a88beb]" /> Shuffle
+            <Shuffle className="w-3.5 h-3.5 text-[#a88beb]" /> Trộn
           </button>
           <button
             onClick={() => handleTranspose(-1)}
             disabled={chords.length === 0}
             className="px-2.5 py-1.5 bg-[#252533] hover:bg-[#323245] text-gray-300 border border-[#3d3d52] text-xs font-bold uppercase rounded flex items-center gap-1 disabled:opacity-40 transition"
-            title="Transpose down 1 semitone"
+            title="Dịch giọng xuống 1 nửa cung (-1 semitone)"
           >
-            <ArrowDown className="w-3.5 h-3.5" /> -1 Semi
+            <ArrowDown className="w-3.5 h-3.5" /> -1 Nửa Cung
           </button>
           <button
             onClick={() => handleTranspose(1)}
             disabled={chords.length === 0}
             className="px-2.5 py-1.5 bg-[#252533] hover:bg-[#323245] text-gray-300 border border-[#3d3d52] text-xs font-bold uppercase rounded flex items-center gap-1 disabled:opacity-40 transition"
-            title="Transpose up 1 semitone"
+            title="Dịch giọng lên 1 nửa cung (+1 semitone)"
           >
-            <ArrowUp className="w-3.5 h-3.5" /> +1 Semi
+            <ArrowUp className="w-3.5 h-3.5" /> +1 Nửa Cung
           </button>
           <button
             onClick={onClearTimeline}
             disabled={chords.length === 0}
             className="px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 text-xs font-bold uppercase rounded flex items-center gap-1 border border-red-800/40 disabled:opacity-40 transition"
           >
-            <Trash2 className="w-3.5 h-3.5" /> Clear
+            <Trash2 className="w-3.5 h-3.5" /> Xóa Hết
           </button>
         </div>
       </div>
@@ -336,15 +366,15 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
           <div className="w-12 h-12 rounded-full bg-[#252533] border border-[#3d3d52] flex items-center justify-center text-[#7c5cbf] mb-3">
             <Sparkles className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-white mb-1">Your timeline is empty</h3>
+          <h3 className="text-base font-bold text-white mb-1">Dòng thời gian hợp âm đang trống</h3>
           <p className="text-xs text-gray-400 max-w-sm mb-4">
-            Click keys on the virtual piano, pick a preset progression, or ask the AI assistant.
+            Bấm phím trên đàn Piano, chơi phím MIDI Controller, chọn mẫu tiến trình có sẵn hoặc nhờ AI gợi ý hòa âm.
           </p>
           <button
             onClick={onOpenPresetLibrary}
             className="px-4 py-2 bg-[#7c5cbf] hover:bg-[#8e6fd1] text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-md transition"
           >
-            Browse Preset Library
+            Mở Thư Viện Hợp Âm Có Sẵn
           </button>
         </div>
       ) : (
@@ -359,6 +389,7 @@ export const ProgressionTimeline: React.FC<ProgressionTimelineProps> = ({
               isSelectedForDetails={selectedChordForDetails?.id === chord.id}
               isDragging={draggedIndex === idx}
               isDragOver={dragOverIndex === idx}
+              availableBeats={availableBeats}
               onDelete={onDeleteChord}
               onUpdateBeats={onUpdateBeats}
               onMove={onMoveChord}

@@ -87,7 +87,9 @@ export function recognizeChordFromNotes(
         let slashBass: string | undefined = undefined;
         if (!isBassRoot) {
           slashBass = bassNote;
-          inv = 1;
+          const bassInterval = (pitchClassToMidiValue(bassNote) - rootMidiVal + 12) % 12;
+          const idxInChord = defPCS.indexOf(bassInterval);
+          inv = idxInChord !== -1 ? idxInChord : 1;
         }
 
         const chordSymbol: SemanticChordSymbol = {
@@ -129,3 +131,31 @@ export function recognizeChordFromNotes(
   // Example case: C E G A -> Am7 (72%), C6 (67%)
   return sorted.slice(0, 5);
 }
+
+export interface ChordRecognitionResult {
+  bestMatch?: {
+    symbol: SemanticChordSymbol;
+    confidence: number;
+  };
+  candidates: RecognitionCandidate[];
+}
+
+export const ChordRecognizer = {
+  recognize(
+    notesOrMidis: Array<number | string>,
+    options: RecognitionOptions = {}
+  ): ChordRecognitionResult {
+    const candidates = recognizeChordFromNotes(notesOrMidis, options);
+    const top = candidates[0];
+    return {
+      bestMatch: top
+        ? {
+            symbol: top.chordSymbol,
+            confidence: top.confidenceScore / 100,
+          }
+        : undefined,
+      candidates,
+    };
+  },
+  recognizeFromNotes: recognizeChordFromNotes,
+};

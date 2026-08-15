@@ -1,41 +1,61 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import * as Tone from "tone";
-import { ChordItem, InstrumentType } from "../types";
-import { createInstrumentSampler } from "../utils/soundfontLoader";
-import { getPianoVoicing } from "../utils/chordData";
+import { ChordItem, InstrumentType, TimeSignatureString, ArpeggioSettings } from "../types";
+import { createInstrumentSampler, createFallbackSynth } from "../utils/soundfontLoader";
 import { getGuitarFingering, getGuitarMidiNotes } from "../utils/guitarVoicings";
 import { midiToNoteName } from "../utils/noteNames";
+import { ArpeggiatorEngine } from "../music/arpeggio";
+import {
+  TimeSignature,
+  RhythmRegistry,
+  RhythmScheduler,
+  ProgressionSchedule,
+  ScheduledMetronomeTick,
+} from "../music/rhythm";
 
 export interface UseAudioEngineOptions {
   bpm: number;
-  timeSignature: "3/4" | "4/4" | "6/8";
+  timeSignature: TimeSignatureString;
+  timeSignatureGrouping?: number[];
   instrument: InstrumentType;
   loop: boolean;
   metronome?: boolean;
   volume?: number;
   chords: ChordItem[];
+  arpeggioSettings?: ArpeggioSettings;
 }
 
 // Helper to convert 0-100% volume into decibels with ultra-boosted gain headroom (up to +24dB boost)
 const volumeToDb = (vol: number): number => {
   if (vol <= 0) return -100;
-  // vol=100 -> 16.0 gain multiplier (+24.08 dB ultra boost)
-  // vol=80 -> 10.0 gain multiplier (+20.00 dB boost)
-  // vol=50 -> 4.0 gain multiplier (+12.04 dB boost)
   const gainRatio = Math.max(0.01, (vol / 100) * 16.0);
   return Tone.gainToDb(gainRatio);
 };
 
 export function useAudioEngine(options: UseAudioEngineOptions) {
-  const { bpm, timeSignature, instrument, loop, metronome = false, volume = 80, chords } = options;
+  const {
+    bpm,
+    timeSignature,
+    timeSignatureGrouping,
+    instrument,
+    loop,
+    metronome = false,
+    volume = 80,
+    chords,
+    arpeggioSettings,
+  } = options;
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentChordIndex, setCurrentChordIndex] = useState<number | null>(null);
+  const [activeBeatIndex, setActiveBeatIndex] = useState<number | null>(null);
+  const [activeSubdivisionIndex, setActiveSubdivisionIndex] = useState<number | null>(null);
+  const [activeAccent, setActiveAccent] = useState<"strong" | "secondary" | "weak" | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingStatus, setLoadingStatus] = useState("Initializing audio engine...");
   const [loadingPercent, setLoadingPercent] = useState(0);
 
   const activeSamplerRef = useRef<Tone.Sampler | null>(null);
+  const fallbackSynthRef = useRef<Tone.PolySynth | null>(null);
   const clickSynthRef = useRef<Tone.Synth | null>(null);
   const kickSynthRef = useRef<Tone.MembraneSynth | null>(null);
   const snareSynthRef = useRef<Tone.NoiseSynth | null>(null);
@@ -47,20 +67,52 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
   const chordsRef = useRef<ChordItem[]>(chords);
   const loopRef = useRef<boolean>(loop);
   const metronomeRef = useRef<boolean>(metronome);
-  const timeSignatureRef = useRef<"3/4" | "4/4" | "6/8">(timeSignature);
+  const timeSignatureRef = useRef<TimeSignatureString>(timeSignature);
+  const groupingRef = useRef<number[] | undefined>(timeSignatureGrouping);
   const instrumentRef = useRef<InstrumentType>(instrument);
-  const scheduledSequenceRef = useRef<Tone.Sequence | null>(null);
+  const arpeggioSettingsRef = useRef<ArpeggioSettings | undefined>(arpeggioSettings);
+  const scheduledEventIdsRef = useRef<number[]>([]);
+
+  // TimeSignature Model resolution
+  const timeSignatureModel = useMemo(() => {
+    return RhythmRegistry.getTimeSignature(timeSignature, timeSignatureGrouping);
+  }, [timeSignature, timeSignatureGrouping]);
+
+  const timeSignatureModelRef = useRef<TimeSignature>(timeSignatureModel);
+  timeSignatureModelRef.current = timeSignatureModel;
 
   // Keep refs in sync
   chordsRef.current = chords;
   loopRef.current = loop;
   metronomeRef.current = metronome;
   timeSignatureRef.current = timeSignature;
+  groupingRef.current = timeSignatureGrouping;
   instrumentRef.current = instrument;
+  arpeggioSettingsRef.current = arpeggioSettings;
 
-  // Initialize Volume, Limiter and Reverb Nodes for natural room ambiance & boosted gain control
+  // Safe voice trigger helper that seamlessly falls back to synthesized audio if sampler buffers are not ready
+  const triggerVoice = useCallback(
+    (noteName: string, duration: any, time?: any, velocity: number = 0.8) => {
+      const sampler = activeSamplerRef.current;
+      if (sampler && sampler.loaded) {
+        try {
+          sampler.triggerAttackRelease(noteName, duration, time, velocity);
+          return;
+        } catch (e) {
+          // Fallback if sampler has missing buffer
+        }
+      }
+      if (fallbackSynthRef.current) {
+        try {
+          fallbackSynthRef.current.triggerAttackRelease(noteName, duration, time, velocity);
+        } catch (_) {}
+      }
+    },
+    []
+  );
+
+  // Initialize Volume, Limiter, Reverb Nodes and Fallback Synth
   useEffect(() => {
-    // High-output limiter (-0.1 dB threshold) preventing clipping while delivering loud output
     const limiter = new Tone.Limiter(-0.1).toDestination();
     limiterRef.current = limiter;
 
@@ -76,13 +128,21 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
 
     reverbRef.current = reverb;
 
-    // Connect active sampler if already present
+    const initialSynth = createFallbackSynth(instrumentRef.current).connect(reverb);
+    fallbackSynthRef.current = initialSynth;
+
     if (activeSamplerRef.current) {
       activeSamplerRef.current.disconnect();
       activeSamplerRef.current.connect(reverb);
     }
 
     return () => {
+      if (fallbackSynthRef.current) {
+        try {
+          fallbackSynthRef.current.dispose();
+        } catch (_) {}
+        fallbackSynthRef.current = null;
+      }
       reverb.dispose();
       reverbRef.current = null;
       volumeNode.dispose();
@@ -96,11 +156,21 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
   useEffect(() => {
     if (volumeNodeRef.current) {
       const targetDb = volumeToDb(volume);
-      volumeNodeRef.current.volume.rampTo(targetDb, 0.05);
+      try {
+        if (Tone.getContext().state === "running") {
+          volumeNodeRef.current.volume.rampTo(targetDb, 0.05);
+        } else {
+          volumeNodeRef.current.volume.value = targetDb;
+        }
+      } catch (e) {
+        try {
+          volumeNodeRef.current.volume.value = targetDb;
+        } catch (_) {}
+      }
     }
   }, [volume]);
 
-  // Dynamically update Transport loop & BPM properties when props change
+  // Dynamically update Transport loop & BPM properties
   useEffect(() => {
     Tone.getTransport().loop = loop;
   }, [loop]);
@@ -109,18 +179,29 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
     Tone.getTransport().bpm.value = bpm;
   }, [bpm]);
 
-  // Initialize Metronome Click Synth and Drum Synths
+  // Update Transport Time Signature
   useEffect(() => {
-    const synth = new Tone.Synth({
-      oscillator: { type: "triangle" },
+    try {
+      const [num, den] = timeSignatureModel.getToneTimeSignature();
+      Tone.getTransport().timeSignature = [num, den];
+    } catch (e) {
+      // safe fallback
+    }
+  }, [timeSignatureModel]);
+
+  // Initialize Metronome Click Synth with dynamic timbre & Drum Synths
+  useEffect(() => {
+    // Use PolySynth for metronome clicks to prevent overlapping envelope conflicts
+    const synth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: "sine" },
       envelope: {
         attack: 0.001,
         decay: 0.03,
         sustain: 0,
-        release: 0.02,
+        release: 0.01,
       },
     }).toDestination();
-    synth.volume.value = -12; // Subtle click track level
+    synth.volume.value = -4; // Clear click track level
     clickSynthRef.current = synth;
 
     const kick = new Tone.MembraneSynth({
@@ -168,16 +249,22 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
       setLoadingStatus(`Loading ${inst.replace("_", " ")} soundfont...`);
       setLoadingPercent(20);
 
-      // Release any ringing notes before switching
       if (activeSamplerRef.current) {
         try {
           activeSamplerRef.current.releaseAll();
-        } catch (e) {
-          // ignore
-        }
+        } catch (e) {}
       }
 
-      // Ensure AudioContext is started on user gesture
+      // Recreate fallback synth for target instrument
+      if (fallbackSynthRef.current) {
+        try {
+          fallbackSynthRef.current.dispose();
+        } catch (_) {}
+      }
+      if (reverbRef.current) {
+        fallbackSynthRef.current = createFallbackSynth(inst).connect(reverbRef.current);
+      }
+
       if (Tone.getContext().state !== "running") {
         await Tone.start();
       }
@@ -187,7 +274,7 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
         setLoadingPercent(status.percent);
       });
 
-      if (reverbRef.current) {
+      if (sampler && reverbRef.current) {
         sampler.disconnect();
         sampler.connect(reverbRef.current);
       }
@@ -198,7 +285,7 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
       setLoadingPercent(100);
     } catch (err) {
       console.error("Audio engine loading error:", err);
-      setLoadingStatus("Audio loading failed. Please refresh.");
+      setLoadingStatus("Audio synthesis active.");
       setIsLoading(false);
     }
   }, []);
@@ -208,76 +295,93 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
     loadInstrument(instrument);
   }, [instrument, loadInstrument]);
 
-  // Update BPM
-  useEffect(() => {
-    Tone.getTransport().bpm.value = bpm;
-  }, [bpm]);
-
-  // Update Time Signature
-  useEffect(() => {
-    const [num, den] = timeSignature.split("/").map(Number);
-    Tone.getTransport().timeSignature = [num, den];
-  }, [timeSignature]);
-
   // Play single chord (preview)
-  const playChordPreview = useCallback(async (chord: ChordItem, customInst?: InstrumentType) => {
-    if (Tone.getContext().state !== "running") {
-      await Tone.start();
-    }
-
-    const sampler = activeSamplerRef.current;
-    if (!sampler) return;
-
-    // Release active notes to avoid stuck voices
-    try {
-      sampler.releaseAll();
-    } catch (e) {}
-
-    const instToUse = customInst || instrumentRef.current;
-    const now = Tone.now();
-    const bpmVal = Tone.getTransport().bpm.value || 90;
-    const secondsPerBeat = 60 / bpmVal;
-
-    const baseVel = chord.velocity !== undefined ? chord.velocity / 100 : 0.8;
-    const baseSustain = chord.sustain !== undefined ? chord.sustain / 100 : 1.0;
-
-    if (instToUse === "piano" || instToUse === "strings") {
-      const notesToPlay = chord.midiNotes && chord.midiNotes.length > 0 ? chord.midiNotes : [60, 64, 67];
-
-      notesToPlay.forEach((midi) => {
-        const noteName = midiToNoteName(midi);
-        const noteVel = chord.noteVelocities?.[midi] !== undefined ? chord.noteVelocities[midi] / 100 : baseVel;
-        const noteSusFactor = chord.noteSustains?.[midi] !== undefined ? chord.noteSustains[midi] / 100 : baseSustain;
-        const durSec = Math.max(0.08, chord.beats * noteSusFactor * secondsPerBeat);
-
-        sampler.triggerAttackRelease(noteName, durSec, now, noteVel);
-      });
-    } else if (instToUse === "drums") {
-      // Drum preview hit: Kick + Snare + Hihat + Bass note
-      if (kickSynthRef.current) kickSynthRef.current.triggerAttackRelease("C1", "8n", now);
-      if (snareSynthRef.current) snareSynthRef.current.triggerAttackRelease("16n", now + 0.1);
-      if (hihatSynthRef.current) hihatSynthRef.current.triggerAttackRelease("16n", now, 0.7);
-      if (sampler) {
-        const rootMidi = chord.midiNotes && chord.midiNotes[0] ? chord.midiNotes[0] - 12 : 36;
-        const durSec = Math.max(0.08, chord.beats * baseSustain * secondsPerBeat);
-        sampler.triggerAttackRelease(midiToNoteName(rootMidi), durSec, now, baseVel);
+  const playChordPreview = useCallback(
+    async (chord: ChordItem, customInst?: InstrumentType, forceArp?: boolean) => {
+      if (Tone.getContext().state !== "running") {
+        await Tone.start();
       }
-    } else {
-      // Guitar strumming
-      const fingering = getGuitarFingering(chord.name);
-      const midis = getGuitarMidiNotes(fingering);
 
-      midis.forEach((midi, index) => {
-        const noteName = midiToNoteName(midi);
-        const strumDelay = index * 0.035; // 35ms strum gap
-        const noteVel = chord.noteVelocities?.[midi] !== undefined ? chord.noteVelocities[midi] / 100 : baseVel;
-        const noteSusFactor = chord.noteSustains?.[midi] !== undefined ? chord.noteSustains[midi] / 100 : baseSustain;
-        const durSec = Math.max(0.08, chord.beats * noteSusFactor * secondsPerBeat);
+      if (activeSamplerRef.current) {
+        try {
+          activeSamplerRef.current.releaseAll();
+        } catch (e) {}
+      }
+      if (fallbackSynthRef.current) {
+        try {
+          fallbackSynthRef.current.releaseAll();
+        } catch (e) {}
+      }
 
-        sampler.triggerAttackRelease(noteName, durSec, now + strumDelay, noteVel);
-      });
-    }
-  }, []);
+      const instToUse = customInst || instrumentRef.current;
+      const now = Tone.now();
+      const model = timeSignatureModelRef.current;
+      const bpmVal = Tone.getTransport().bpm.value || 90;
+      const chordDuration = model.getChordDurationInSeconds(chord.beats, bpmVal);
+
+      const baseVel = chord.velocity !== undefined ? chord.velocity / 100 : 0.8;
+      const baseSustain = chord.sustain !== undefined ? chord.sustain / 100 : 1.0;
+
+      const arpActive =
+        forceArp !== undefined
+          ? forceArp
+          : arpeggioSettingsRef.current?.enabled &&
+            arpeggioSettingsRef.current.pattern !== "off";
+
+      if (arpActive && arpeggioSettingsRef.current && instToUse !== "drums") {
+        const arpEvents = ArpeggiatorEngine.generateArpeggioEvents(
+          chord,
+          chordDuration,
+          bpmVal,
+          arpeggioSettingsRef.current
+        );
+
+        arpEvents.forEach((ev) => {
+          triggerVoice(
+            ev.noteName,
+            ev.durationSeconds,
+            now + ev.timeOffsetSeconds,
+            ev.velocity
+          );
+        });
+        return;
+      }
+
+      if (instToUse === "piano" || instToUse === "strings") {
+        const notesToPlay = chord.midiNotes && chord.midiNotes.length > 0 ? chord.midiNotes : [60, 64, 67];
+
+        notesToPlay.forEach((midi) => {
+          const noteName = midiToNoteName(midi);
+          const noteVel = chord.noteVelocities?.[midi] !== undefined ? chord.noteVelocities[midi] / 100 : baseVel;
+          const noteSusFactor = chord.noteSustains?.[midi] !== undefined ? chord.noteSustains[midi] / 100 : baseSustain;
+          const durSec = Math.max(0.08, chordDuration * noteSusFactor);
+
+          triggerVoice(noteName, durSec, now, noteVel);
+        });
+      } else if (instToUse === "drums") {
+        if (kickSynthRef.current) kickSynthRef.current.triggerAttackRelease("C1", "8n", now);
+        if (snareSynthRef.current) snareSynthRef.current.triggerAttackRelease("16n", now + 0.1);
+        if (hihatSynthRef.current) hihatSynthRef.current.triggerAttackRelease("16n", now, 0.7);
+        const rootMidi = chord.midiNotes && chord.midiNotes[0] ? chord.midiNotes[0] - 12 : 36;
+        const durSec = Math.max(0.08, chordDuration * baseSustain);
+        triggerVoice(midiToNoteName(rootMidi), durSec, now, baseVel);
+      } else {
+        const fingering = getGuitarFingering(chord.name);
+        const midis = getGuitarMidiNotes(fingering);
+
+        midis.forEach((midi, index) => {
+          const noteName = midiToNoteName(midi);
+          const strumDelay = index * 0.035;
+          const noteVel = chord.noteVelocities?.[midi] !== undefined ? chord.noteVelocities[midi] / 100 : baseVel;
+          const noteSusFactor = chord.noteSustains?.[midi] !== undefined ? chord.noteSustains[midi] / 100 : baseSustain;
+          const durSec = Math.max(0.08, chordDuration * noteSusFactor);
+
+          triggerVoice(noteName, durSec, now + strumDelay, noteVel);
+        });
+      }
+    },
+    [triggerVoice]
+  );
 
   // Play single note (piano key press)
   const playNotePreview = useCallback(async (midi: number) => {
@@ -285,28 +389,32 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
       await Tone.start();
     }
 
-    const sampler = activeSamplerRef.current;
-    if (!sampler) return;
-
     const noteName = midiToNoteName(midi);
-    sampler.triggerAttackRelease(noteName, "1n", Tone.now(), 0.9);
-  }, []);
+    triggerVoice(noteName, "1n", Tone.now(), 0.9);
+  }, [triggerVoice]);
 
   // Stop playback and release all active voices
   const stop = useCallback(() => {
     Tone.getTransport().stop();
     Tone.getTransport().cancel();
+    scheduledEventIdsRef.current = [];
+
     if (activeSamplerRef.current) {
       try {
         activeSamplerRef.current.releaseAll();
       } catch (e) {}
     }
-    if (scheduledSequenceRef.current) {
-      scheduledSequenceRef.current.dispose();
-      scheduledSequenceRef.current = null;
+    if (fallbackSynthRef.current) {
+      try {
+        fallbackSynthRef.current.releaseAll();
+      } catch (e) {}
     }
+
     setIsPlaying(false);
     setCurrentChordIndex(null);
+    setActiveBeatIndex(null);
+    setActiveSubdivisionIndex(null);
+    setActiveAccent(null);
   }, []);
 
   // Panic / Kill all notes safeguard
@@ -317,11 +425,16 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
         activeSamplerRef.current.releaseAll();
       } catch (e) {}
     }
+    if (fallbackSynthRef.current) {
+      try {
+        fallbackSynthRef.current.releaseAll();
+      } catch (e) {}
+    }
   }, [stop]);
 
   const lastChordSigRef = useRef<string>("");
 
-  // Play progression
+  // Play progression using generic RhythmScheduler
   const play = useCallback(async () => {
     if (!chordsRef.current || chordsRef.current.length === 0) return;
 
@@ -329,43 +442,25 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
       await Tone.start();
     }
 
-    stop(); // Clear any existing transport events and release notes
+    stop(); // Clear any existing transport events
 
     Tone.getTransport().bpm.value = bpm;
     Tone.getTransport().loop = loopRef.current;
 
-    const [num] = timeSignatureRef.current.split("/").map(Number);
-    const beatsPerMeasure = num || 4;
+    const model = timeSignatureModelRef.current;
+    const schedule: ProgressionSchedule = RhythmScheduler.scheduleProgression(
+      chordsRef.current,
+      model,
+      bpm,
+      true
+    );
 
-    // Calculate duration of progression in beats
-    const events: Array<{ time: number; chordIndex: number; chord: ChordItem }> = [];
-    let currentBeatOffset = 0;
+    Tone.getTransport().loopStart = 0;
+    Tone.getTransport().loopEnd = schedule.loopEndSeconds;
 
-    chordsRef.current.forEach((chord, index) => {
-      events.push({
-        time: currentBeatOffset,
-        chordIndex: index,
-        chord,
-      });
-      currentBeatOffset += chord.beats;
-    });
-
-    const totalBeats = currentBeatOffset;
-    const bars = Math.floor(totalBeats / beatsPerMeasure);
-    const quarterBeats = totalBeats % beatsPerMeasure;
-    const totalTimeStr = `${bars}:${quarterBeats}:0`;
-
-    Tone.getTransport().loopStart = "0:0:0";
-    Tone.getTransport().loopEnd = totalTimeStr;
-
-    const bpmVal = Tone.getTransport().bpm.value || 90;
-    const secondsPerBeat = 60 / bpmVal;
-
-    // Schedule chord events on Transport
-    events.forEach(({ time, chordIndex, chord }) => {
-      const bar = Math.floor(time / beatsPerMeasure);
-      const beat = time % beatsPerMeasure;
-      const transportTime = `${bar}:${beat}:0`;
+    // Schedule Chords or Arpeggios on Transport at exact timestamps
+    schedule.chordEvents.forEach((event) => {
+      const { chord, startTimeSeconds, durationSeconds, chordIndex } = event;
 
       Tone.getTransport().schedule((now) => {
         // UI highlight callback
@@ -373,14 +468,33 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
           setCurrentChordIndex(chordIndex);
         }, now);
 
-        const sampler = activeSamplerRef.current;
-        if (!sampler) return;
-
         const currentInst = instrumentRef.current;
-        const durationBeats = chord.beats;
-
         const baseVel = chord.velocity !== undefined ? chord.velocity / 100 : 0.8;
         const baseSustain = chord.sustain !== undefined ? chord.sustain / 100 : 1.0;
+
+        const isArpActive =
+          arpeggioSettingsRef.current?.enabled &&
+          arpeggioSettingsRef.current.pattern !== "off" &&
+          currentInst !== "drums";
+
+        if (isArpActive && arpeggioSettingsRef.current) {
+          const arpEvents = ArpeggiatorEngine.generateArpeggioEvents(
+            chord,
+            durationSeconds,
+            bpm,
+            arpeggioSettingsRef.current
+          );
+
+          arpEvents.forEach((ev) => {
+            triggerVoice(
+              ev.noteName,
+              ev.durationSeconds,
+              now + ev.timeOffsetSeconds,
+              ev.velocity
+            );
+          });
+          return;
+        }
 
         if (currentInst === "piano" || currentInst === "strings") {
           const notesToPlay = chord.midiNotes && chord.midiNotes.length > 0 ? chord.midiNotes : [60, 64, 67];
@@ -389,80 +503,83 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
             const noteName = midiToNoteName(midi);
             const noteVel = chord.noteVelocities?.[midi] !== undefined ? chord.noteVelocities[midi] / 100 : baseVel;
             const noteSusFactor = chord.noteSustains?.[midi] !== undefined ? chord.noteSustains[midi] / 100 : baseSustain;
-            const durSec = Math.max(0.08, durationBeats * noteSusFactor * secondsPerBeat);
+            const durSec = Math.max(0.08, durationSeconds * noteSusFactor);
 
-            sampler.triggerAttackRelease(noteName, durSec, now, noteVel);
+            triggerVoice(noteName, durSec, now, noteVel);
           });
         } else if (currentInst === "drums") {
-          // Play rhythmic drum groove for the duration of this chord
-          for (let b = 0; b < durationBeats; b++) {
-            const beatTime = now + b * secondsPerBeat;
-            const isKickBeat = b % 2 === 0;
-            const isSnareBeat = b % 2 === 1;
+          // Play rhythmic drum groove suited to the meter
+          const subDuration = model.getSubdivisionDuration(bpm);
+          const totalSubsForChord = Math.max(1, Math.round(durationSeconds / subDuration));
 
-            if (isKickBeat && kickSynthRef.current) {
-              kickSynthRef.current.triggerAttackRelease("C1", "8n", beatTime);
+          for (let s = 0; s < totalSubsForChord; s++) {
+            const subTime = now + s * subDuration;
+            const isKick = s % 2 === 0;
+            const isSnare = s % 2 === 1;
+
+            if (isKick && kickSynthRef.current) {
+              kickSynthRef.current.triggerAttackRelease("C1", "8n", subTime);
             }
-            if (isSnareBeat && snareSynthRef.current) {
-              snareSynthRef.current.triggerAttackRelease("16n", beatTime);
+            if (isSnare && snareSynthRef.current) {
+              snareSynthRef.current.triggerAttackRelease("16n", subTime);
             }
             if (hihatSynthRef.current) {
-              hihatSynthRef.current.triggerAttackRelease("16n", beatTime, 0.6);
-              hihatSynthRef.current.triggerAttackRelease("16n", beatTime + secondsPerBeat / 2, 0.4);
+              hihatSynthRef.current.triggerAttackRelease("16n", subTime, 0.5);
             }
           }
-          // Also play bass note of the chord
-          if (sampler) {
-            const rootMidi = chord.midiNotes && chord.midiNotes[0] ? chord.midiNotes[0] - 12 : 36;
-            const durSec = Math.max(0.08, durationBeats * baseSustain * secondsPerBeat);
-            sampler.triggerAttackRelease(midiToNoteName(rootMidi), durSec, now, baseVel);
-          }
+
+          const rootMidi = chord.midiNotes && chord.midiNotes[0] ? chord.midiNotes[0] - 12 : 36;
+          const durSec = Math.max(0.08, durationSeconds * baseSustain);
+          triggerVoice(midiToNoteName(rootMidi), durSec, now, baseVel);
         } else {
           const fingering = getGuitarFingering(chord.name);
           const midis = getGuitarMidiNotes(fingering);
 
           midis.forEach((midi, idx) => {
             const noteName = midiToNoteName(midi);
-            const strumDelay = idx * 0.03; // 30ms strum gap
+            const strumDelay = idx * 0.03;
             const noteVel = chord.noteVelocities?.[midi] !== undefined ? chord.noteVelocities[midi] / 100 : baseVel;
             const noteSusFactor = chord.noteSustains?.[midi] !== undefined ? chord.noteSustains[midi] / 100 : baseSustain;
-            const durSec = Math.max(0.08, durationBeats * noteSusFactor * secondsPerBeat);
+            const durSec = Math.max(0.08, durationSeconds * noteSusFactor);
 
-            sampler.triggerAttackRelease(noteName, durSec, now + strumDelay, noteVel);
+            triggerVoice(noteName, durSec, now + strumDelay, noteVel);
           });
         }
-      }, transportTime);
+      }, startTimeSeconds);
     });
 
-    // Schedule beat-by-beat metronome clicks synced to BPM
-    for (let b = 0; b < totalBeats; b++) {
-      const bBar = Math.floor(b / beatsPerMeasure);
-      const bBeat = b % beatsPerMeasure;
-      const bTransportTime = `${bBar}:${bBeat}:0`;
-
+    // Schedule Metronome Ticks & Beat Indicator updates
+    schedule.metronomeTicks.forEach((tick: ScheduledMetronomeTick) => {
       Tone.getTransport().schedule((now) => {
+        // Visual Beat & Subdivision Indicator sync
+        Tone.Draw.schedule(() => {
+          setActiveSubdivisionIndex(tick.subdivisionIndex);
+          setActiveBeatIndex(tick.displayNumber - 1);
+          setActiveAccent(tick.accent);
+        }, now);
+
+        // Audible click track
         if (metronomeRef.current && clickSynthRef.current) {
-          const isDownbeat = b % beatsPerMeasure === 0;
           clickSynthRef.current.triggerAttackRelease(
-            isDownbeat ? "C6" : "G5",
+            tick.pitch,
             "32n",
             now,
-            isDownbeat ? 0.6 : 0.3
+            tick.velocity
           );
         }
-      }, bTransportTime);
-    }
+      }, tick.timeSeconds);
+    });
 
-    // Schedule end of progression callback (if looping is off)
+    // Schedule loop termination if looping is disabled
     Tone.getTransport().schedule((now) => {
       if (!loopRef.current) {
         Tone.Draw.schedule(() => {
           stop();
         }, now);
       }
-    }, totalTimeStr);
+    }, schedule.totalDurationSeconds);
 
-    Tone.getTransport().position = "0:0:0";
+    Tone.getTransport().position = 0;
     Tone.getTransport().start();
     setIsPlaying(true);
   }, [bpm, stop]);
@@ -478,22 +595,30 @@ export function useAudioEngine(options: UseAudioEngineOptions) {
     setIsPlaying(false);
   }, []);
 
-  // Reschedule live playback ONLY if chord list structure actually changes during playback
+  // Reschedule live playback if chord list, time signature, or arpeggiator structure changes during active playback
   useEffect(() => {
-    const currentSig = chords.map((c) => `${c.id}:${c.name}:${c.beats}:${c.velocity}:${c.sustain}`).join("|");
+    const arpSig = arpeggioSettings
+      ? `${arpeggioSettings.enabled}:${arpeggioSettings.pattern}:${arpeggioSettings.rate}:${arpeggioSettings.octaves}:${arpeggioSettings.gate}:${arpeggioSettings.swing}:${arpeggioSettings.accentFirstBeat}:${arpeggioSettings.rootBassNote}`
+      : "no_arp";
+    const currentSig = `${timeSignature}:${groupingRef.current?.join("+") || ""}:${chords.map((c) => `${c.id}:${c.name}:${c.beats}:${c.velocity}:${c.sustain}`).join("|")}:${arpSig}`;
     const isDifferent = lastChordSigRef.current !== currentSig;
     lastChordSigRef.current = currentSig;
 
     chordsRef.current = chords;
+    arpeggioSettingsRef.current = arpeggioSettings;
 
     if (isDifferent && isPlaying) {
       play();
     }
-  }, [chords, isPlaying, play]);
+  }, [chords, timeSignature, timeSignatureGrouping, arpeggioSettings, isPlaying, play]);
 
   return {
     isPlaying,
     currentChordIndex,
+    activeBeatIndex,
+    activeSubdivisionIndex,
+    activeAccent,
+    timeSignatureModel,
     isLoading,
     loadingStatus,
     loadingPercent,

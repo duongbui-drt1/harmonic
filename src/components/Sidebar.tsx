@@ -24,6 +24,8 @@ import {
   Key,
   Clock,
   Music2,
+  GraduationCap,
+  Piano,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -44,6 +46,7 @@ interface SidebarProps {
   onRedo: () => void;
   onOpenSavedModal: () => void;
   onOpenA11yModal: () => void;
+  onOpenMidiModal?: () => void;
   onPrintReport: () => void;
 }
 
@@ -65,6 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onRedo,
   onOpenSavedModal,
   onOpenA11yModal,
+  onOpenMidiModal,
   onPrintReport,
 }) => {
   const ALL_KEYS = [
@@ -82,16 +86,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   const tabs = [
-    { id: "theory", label: "Chord Theory", icon: BookOpen, tag: "Lý Thuyết" },
-    { id: "voice_leading", label: "Voice Leading Lab", icon: Sliders, tag: "Dẫn Nốt" },
-    { id: "tension_graph", label: "Tension & Graph", icon: Activity, tag: "Căng Thẳng" },
-    { id: "mutator_whatif", label: "Mutator & What-If", icon: Wand2, tag: "Biến Thể" },
-    { id: "doctor_modulation", label: "Chord Doctor", icon: Stethoscope, tag: "Chẩn Đoán" },
-    { id: "genre_dna", label: "Genre DNA & Style", icon: Layers, tag: "Dòng Nhạc" },
-    { id: "midi_analyzer", label: "MIDI Analyzer", icon: FileAudio, tag: "Nhập MIDI" },
-    { id: "notation", label: "Sheet Notation", icon: Music, tag: "Phổ Nhạc" },
-    { id: "presets", label: "Preset Library", icon: Music2, tag: "250 Presets" },
-    { id: "ai", label: "AI Harmony Co-Pilot", icon: Sparkles, tag: "Trợ Lý AI" },
+    { id: "learn", label: "Chế Độ Học Nhạc Tương Tác", icon: GraduationCap, tag: "Học Nhạc" },
+    { id: "lyria_preview", label: "Phòng Thử Hòa Âm AI", icon: Sparkles, tag: "Lyria AI" },
+    { id: "theory", label: "Lý Thuyết & Cấu Trúc Hợp Âm", icon: BookOpen, tag: "Lý Thuyết" },
+    { id: "voice_leading", label: "Phòng Thí Nghiệm Dẫn Bè", icon: Sliders, tag: "Voice Leading" },
+    { id: "tension_graph", label: "Biểu Đồ Lực Căng Hòa Âm", icon: Activity, tag: "Tension" },
+    { id: "mutator_whatif", label: "Biến Thể & Giả Định (What-If)", icon: Wand2, tag: "Mutator" },
+    { id: "doctor_modulation", label: "Chẩn Đoán & Chuyển Giọng", icon: Stethoscope, tag: "Chord Doctor" },
+    { id: "genre_dna", label: "Đặc Trưng Thể Loại Âm Nhạc", icon: Layers, tag: "Genre DNA" },
+    { id: "midi_analyzer", label: "Phân Tích Tệp MIDI", icon: FileAudio, tag: "MIDI" },
+    { id: "notation", label: "Ký Âm & Bản Nhạc (Sheet)", icon: Music, tag: "Notation" },
+    { id: "presets", label: "Thư Viện Tiến Trình Hợp Âm", icon: Music2, tag: "250+ Mẫu" },
+    { id: "ai", label: "Trợ Lý Hòa Âm AI Co-Pilot", icon: Sparkles, tag: "AI Co-Pilot" },
   ];
 
   return (
@@ -233,6 +239,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Secondary Actions */}
           <div className="space-y-1.5 pt-2 border-t border-[#2d2d3d]">
+            {onOpenMidiModal && (
+              <button
+                onClick={onOpenMidiModal}
+                className="w-full px-3 py-2 bg-[#1a1a24] hover:bg-[#252533] border border-[#2d2d3d] text-white text-xs font-bold rounded-xl flex items-center gap-2 transition"
+              >
+                <Piano className="w-4 h-4 text-purple-400" /> Cài Đặt MIDI Controller
+              </button>
+            )}
+
             <button
               onClick={onOpenSavedModal}
               className="w-full px-3 py-2 bg-[#1a1a24] hover:bg-[#252533] border border-[#2d2d3d] text-white text-xs font-bold rounded-xl flex items-center gap-2 transition"
