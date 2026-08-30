@@ -100,31 +100,31 @@ const INSTRUMENT_CONFIGS: Record<InstrumentType, InstrumentSampleConfig> = {
     fallbackBaseUrl: "https://tonejs.github.io/audio/casio/",
     fallbackUrls: CASIO_PIANO_SAMPLES,
     soundfontName: "acoustic_grand_piano",
-    volumeOffset: 0,
+    volumeOffset: -2,
   },
   acoustic_guitar: {
     primaryBaseUrl: "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments/samples/guitar-acoustic/",
     primaryUrls: GUITAR_ACOUSTIC_SAMPLES,
     soundfontName: "acoustic_guitar_nylon",
-    volumeOffset: 0,
+    volumeOffset: -2,
   },
   electric_guitar: {
     primaryBaseUrl: "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments/samples/guitar-electric/",
     primaryUrls: GUITAR_ELECTRIC_SAMPLES,
     soundfontName: "electric_guitar_clean",
-    volumeOffset: 0,
+    volumeOffset: -2,
   },
   strings: {
     primaryBaseUrl: "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments/samples/violin/",
     primaryUrls: VIOLIN_STRINGS_SAMPLES,
     soundfontName: "violin",
-    volumeOffset: 0,
+    volumeOffset: -2,
   },
   drums: {
     primaryBaseUrl: "https://tonejs.github.io/audio/drum-samples/acoustic-kit/",
     primaryUrls: DRUMS_SAMPLES,
     soundfontName: "taiko_drum",
-    volumeOffset: 0,
+    volumeOffset: -2,
   },
 };
 
@@ -192,7 +192,7 @@ export function createFallbackSynth(instrument: InstrumentType): Tone.PolySynth 
           sustain: 0.15,
           release: 1.8,
         },
-        volume: 0,
+        volume: -2,
       });
 
     case "acoustic_guitar":
@@ -205,7 +205,7 @@ export function createFallbackSynth(instrument: InstrumentType): Tone.PolySynth 
           sustain: 0.1,
           release: 1.0,
         },
-        volume: 0,
+        volume: -2,
       });
 
     case "strings":
@@ -217,7 +217,7 @@ export function createFallbackSynth(instrument: InstrumentType): Tone.PolySynth 
           sustain: 0.75,
           release: 1.6,
         },
-        volume: 0,
+        volume: -2,
       });
 
     case "drums":
@@ -230,7 +230,7 @@ export function createFallbackSynth(instrument: InstrumentType): Tone.PolySynth 
           sustain: 0,
           release: 0.2,
         },
-        volume: 0,
+        volume: -2,
       });
   }
 }
@@ -277,7 +277,7 @@ async function fetchSoundfontJS(soundfontName: string): Promise<Record<string, s
 function buildSampler(
   urls: Record<string, string>,
   baseUrl?: string,
-  volumeOffset: number = 0,
+  volumeOffset: number = -2,
   timeoutMs: number = 6000
 ): Promise<Tone.Sampler | null> {
   return new Promise((resolve) => {

@@ -41,7 +41,7 @@ export function useMidi(options: UseMidiOptions = {}) {
           sustain: 0.6,
           release: 0.8,
         },
-        volume: 0,
+        volume: -2,
       }).toDestination();
 
       midiSynthRef.current = synth;
