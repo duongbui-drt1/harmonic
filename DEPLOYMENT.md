@@ -6,7 +6,7 @@ Tài liệu này hướng dẫn chi tiết cách triển khai (deploy) ứng d�
 
 ## 🚀 Cách 1: Tự Động Deploy Lên GitHub Pages (Khuyên Dùng - Miễn Phí 100%)
 
-Dự án đã được tích hợp sẵn quy trình CI/CD **GitHub Actions** tại `.github/workflows/deploy-pages.yml`. Mỗi khi bạn `git push` code lên nhánh `main` hoặc `master`, GitHub Actions sẽ tự động kiểm tra code, chạy test và deploy lên GitHub Pages.
+Dự án đã được tích hợp sẵn quy trình CI/CD **GitHub Actions** tại `.github/workflows/deploy.yml`. Mỗi khi bạn `git push` code lên nhánh `main` hoặc `master`, GitHub Actions sẽ tự động kiểm tra code, chạy test và deploy lên GitHub Pages.
 
 ### Các bước kích hoạt trên GitHub:
 
@@ -87,5 +87,5 @@ Dự án gồm 2 workflows tự động:
 1. **`CI - Continuous Integration`** (`.github/workflows/ci.yml`):
    - Chạy trên Node 18.x, 20.x, 22.x.
    - Kiểm tra linter, type-check TypeScript và chạy toàn bộ unit tests (`npm run test`).
-2. **`Deploy to GitHub Pages`** (`.github/workflows/deploy-pages.yml`):
+2. **`Deploy to GitHub Pages`** (`.github/workflows/deploy.yml`):
    - Tự động build production client và xuất bản lên GitHub Pages khi có code mới trên nhánh chính.
