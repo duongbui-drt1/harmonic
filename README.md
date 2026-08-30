@@ -96,6 +96,17 @@ npm start
 
 ---
 
+## 🌐 Triển Khai & GitHub Actions CI/CD (Deployment)
+
+Dự án đã được thiết lập sẵn **GitHub Actions**:
+- **`.github/workflows/deploy-pages.yml`**: Tự động build và deploy trang web lên **GitHub Pages** miễn phí mỗi khi bạn push code lên nhánh `main`/`master`.
+- **`.github/workflows/ci.yml`**: Tự động kiểm tra cú pháp, linter, TypeScript và chạy Unit Test trên các phiên bản Node.js 18, 20, 22.
+- **`Dockerfile`**: Hỗ trợ đóng gói container cho Google Cloud Run, Render, Railway, Fly.io hoặc máy chủ VPS riêng.
+
+👉 Xem hướng dẫn chi tiết từng bước tại [**DEPLOYMENT.md**](./DEPLOYMENT.md).
+
+---
+
 ## 📜 Giấy Phép (License)
 
 Dự án được phát hành theo giấy phép MIT License.
