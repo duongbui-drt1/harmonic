@@ -31,6 +31,10 @@ Dự án đã được tích hợp sẵn quy trình CI/CD **GitHub Actions** t�
    - Khi hoàn thành (dấu tích xanh ✅), đường link trang web của bạn sẽ xuất hiện tại mục Pages:
      `https://<USERNAME>.github.io/<REPO_NAME>/`
 
+### 💡 Lưu ý về tính năng AI Gemini khi chạy trên GitHub Pages:
+- **Tự động kích hoạt Bộ tạo Hòa âm Thông minh (Smart Harmonic Engine)**: Bạn có thể nhập bất kỳ yêu cầu sáng tác nào (Ballad, Bolero, Pop, Cải Lương, Jazz...) và ứng dụng sẽ lập tức tính toán và sinh vòng hợp âm hoàn chỉnh mà không bị lỗi mạng.
+- **Dùng Gemini Live**: Bạn cũng có thể bấm nút **"Cấu hình API Key"** trên giao diện Trợ Lý AI để dán `GEMINI_API_KEY` (miễn phí từ Google AI Studio), trình duyệt sẽ gọi trực tiếp mô hình Gemini 2.5 Flash từ phía client.
+
 ---
 
 ## ⚡ Cách 2: Deploy Nhanh Lên Vercel / Netlify / Cloudflare Pages

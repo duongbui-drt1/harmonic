@@ -54,18 +54,32 @@ class LyriaService {
         signal,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || `Generation failed with status ${response.status}`;
+      const contentType = response.headers.get("content-type") || "";
+      const text = await response.text();
+      let data: any = {};
+      try {
+        if (contentType.includes("application/json") || !text.trim().startsWith("<")) {
+          data = JSON.parse(text);
+        }
+      } catch {
+        data = {};
+      }
+
+      if (!response.ok || !data.success) {
+        const errorMessage =
+          data.error ||
+          (text.trim().startsWith("<")
+            ? "Lyria AI server endpoint is only available when running with full-stack Node.js server. Offline synthesizer preview is fully active."
+            : `Generation failed with status ${response.status}`);
         return {
           success: false,
           error: errorMessage,
-          isQuotaError: !!errorData.isQuotaError,
+          isQuotaError: !!data.isQuotaError,
           previewMode: context.previewMode,
         };
       }
 
-      const result: LyriaAudioResult = await response.json();
+      const result: LyriaAudioResult = data;
 
       if (result.success && result.audio) {
         this.cache.set(key, result);

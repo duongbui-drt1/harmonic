@@ -1,7 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChordItem, AIAnalysisResult, AIGenerationResult } from "../types";
 import { parseChordName, getChordNotes } from "../utils/chordData";
-import { Sparkles, Loader2, Play, Activity, Music, Tag, Compass, FileText } from "lucide-react";
+import {
+  generateChordProgressionAI,
+  analyzeChordProgressionAI,
+  getStoredGeminiApiKey,
+  setStoredGeminiApiKey,
+} from "../services/geminiClientService";
+import {
+  Sparkles,
+  Loader2,
+  Play,
+  Activity,
+  Music,
+  Tag,
+  Compass,
+  FileText,
+  Key,
+  Check,
+  Info,
+} from "lucide-react";
 
 interface AIAssistantProps {
   currentChords?: ChordItem[];
@@ -32,7 +50,27 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [generationResult, setGenerationResult] = useState<AIGenerationResult | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AIAnalysisResult | null>(null);
+  const [resultSource, setResultSource] = useState<"server" | "gemini_client" | "algorithmic" | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Gemini API Key config toggle for GitHub Pages client-side mode
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [savedKeySuccess, setSavedKeySuccess] = useState(false);
+
+  useEffect(() => {
+    setApiKeyInput(getStoredGeminiApiKey());
+  }, []);
+
+  const handleSaveApiKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    setStoredGeminiApiKey(apiKeyInput);
+    setSavedKeySuccess(true);
+    setTimeout(() => {
+      setSavedKeySuccess(false);
+      setShowKeyModal(false);
+    }, 1200);
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,19 +81,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setGenerationResult(null);
 
     try {
-      const res = await fetch("/api/ai/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to generate chord progression");
-      }
-
-      const data: AIGenerationResult = await res.json();
-      setGenerationResult(data);
+      const res = await generateChordProgressionAI(prompt);
+      setGenerationResult(res.result);
+      setResultSource(res.source);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || "An error occurred during AI generation");
@@ -74,23 +102,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setErrorMsg(null);
 
     try {
-      const res = await fetch("/api/ai/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          progression: activeChords.map((c) => ({ name: c.name, beats: c.beats })),
-          key: activeKey,
-          bpm: activeBpm,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to analyze progression");
-      }
-
-      const data: AIAnalysisResult = await res.json();
-      setAnalysisResult(data);
+      const res = await analyzeChordProgressionAI(activeChords, activeKey, activeBpm);
+      setAnalysisResult(res.result);
+      setResultSource(res.source);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || "An error occurred during AI analysis");
@@ -126,6 +140,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     }
   };
 
+  const hasConfiguredApiKey = !!getStoredGeminiApiKey();
+
   return (
     <div className="bg-[#1a1a24] border border-[#2d2d3d] rounded-xl p-5 shadow-xl space-y-6">
       {/* Header */}
@@ -136,14 +152,22 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               Trợ Lý Trí Tuệ Nhân Tạo
             </span>
             <span className="px-2.5 py-0.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-extrabold text-[10px] rounded-full flex items-center gap-1 shadow-sm">
-              <Sparkles className="w-3 h-3 text-yellow-300 animate-pulse" /> Powered by Google Gemini
+              <Sparkles className="w-3 h-3 text-yellow-300 animate-pulse" /> Google Gemini AI
             </span>
+            <button
+              onClick={() => setShowKeyModal(!showKeyModal)}
+              className="px-2 py-0.5 bg-[#252533] hover:bg-[#323245] text-gray-300 border border-[#3d3d52] text-[10px] rounded-full flex items-center gap-1 transition"
+              title="Cài đặt API Key Gemini khi chạy trên GitHub Pages"
+            >
+              <Key className="w-2.5 h-2.5 text-amber-400" />
+              {hasConfiguredApiKey ? "API Key: Đã lưu" : "Cấu hình API Key"}
+            </button>
           </div>
           <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
             AI Phân Tích & Sáng Tác Hòa Âm
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Mô tả tâm trạng, thể loại hoặc câu chuyện để AI tự động sáng tác vòng hợp âm phù hợp, hoặc phân tích lý thuyết vòng hợp âm hiện tại.
+            Mô tả ý tưởng, thể loại hoặc cảm xúc để AI tự động sáng tác vòng hợp âm phù hợp, hoặc phân tích lý thuyết vòng hợp âm hiện tại.
           </p>
         </div>
 
@@ -161,6 +185,51 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           Phân Tích Vòng Hiện Tại
         </button>
       </div>
+
+      {/* API Key Modal / Drawer for GitHub Pages users */}
+      {showKeyModal && (
+        <form
+          onSubmit={handleSaveApiKey}
+          className="bg-[#12121a] border border-indigo-500/40 p-4 rounded-xl space-y-3 animate-fadeIn"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-amber-400" /> Cài Đặt Khóa Gemini API (Tùy chọn)
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowKeyModal(false)}
+              className="text-xs text-gray-400 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="text-[11px] text-gray-300 leading-relaxed">
+            Khi chạy trên <strong>GitHub Pages (Static Web)</strong>, bạn có thể dán khóa <code>GEMINI_API_KEY</code> miễn phí từ Google AI Studio để gọi trực tiếp mô hình Gemini từ trình duyệt. Khóa sẽ được lưu an toàn trong <code>localStorage</code> của bạn. Nếu để trống, hệ thống sẽ tự động sử dụng <strong>Bộ Tạo Hòa Âm Nhạc Lý Tích Hợp</strong>!
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder="Dán AI Studio Gemini API Key (AIzaSy...)"
+              className="flex-1 px-3 py-2 bg-[#0a0a0f] border border-[#3d3d52] rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 font-mono"
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded flex items-center gap-1 transition"
+            >
+              {savedKeySuccess ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-green-300" /> Đã Lưu
+                </>
+              ) : (
+                "Lưu Khóa"
+              )}
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* AI Prompt Input Form */}
       <form onSubmit={handleGenerate} className="space-y-3" role="search" aria-label="Khung nhập mô tả sáng tác AI">
@@ -205,11 +274,24 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       {/* AI Generation Result Display */}
       {generationResult && (
         <div className="bg-[#0f0f13] border border-[#7c5cbf] p-4 rounded-lg space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#a88beb] uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> AI Composition Result
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#a88beb] uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-yellow-300" /> Kết Quả Sáng Tác AI
+              </span>
+              {resultSource && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-950 text-indigo-300 border border-indigo-700/50">
+                  {resultSource === "gemini_client"
+                    ? "✨ Gemini Direct (In-Browser)"
+                    : resultSource === "server"
+                    ? "✨ Gemini Cloud Server"
+                    : "⚡ Smart Harmonic Engine"}
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-mono font-bold text-gray-400">
+              Key: {generationResult.key} ({generationResult.mode})
             </span>
-            <span className="text-xs font-mono font-bold text-gray-400">Key: {generationResult.key} ({generationResult.mode})</span>
           </div>
 
           <div className="text-sm font-bold text-white tracking-wide font-mono bg-[#1a1a24] p-3 rounded border border-[#2d2d3d]">
@@ -220,14 +302,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
           <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-[#2d2d3d]">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Mood: {generationResult.mood}</span>
+              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
+                Mood: {generationResult.mood}
+              </span>
             </div>
 
             <button
               onClick={applyAIGeneratedChords}
               className="px-4 py-1.5 bg-[#7c5cbf] hover:bg-[#8e6fd1] text-white text-xs font-bold uppercase tracking-wider rounded flex items-center gap-1.5 shadow-md transition"
             >
-              <Play className="w-3.5 h-3.5 fill-current" /> Load into Timeline
+              <Play className="w-3.5 h-3.5 fill-current" /> Đưa Vào Timeline
             </button>
           </div>
         </div>
@@ -238,7 +322,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         <div className="bg-[#0f0f13] border border-[#2d2d3d] p-5 rounded-lg space-y-4">
           <div className="flex items-center justify-between border-b border-[#2d2d3d] pb-3">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Activity className="w-4 h-4 text-[#7c5cbf]" /> Progression Theoretical Analysis
+              <Activity className="w-4 h-4 text-[#7c5cbf]" /> Phân Tích Lý Thuyết Vòng Hợp Âm
             </h3>
             <span className="text-xs font-mono font-bold text-[#a88beb]">{analysisResult.key}</span>
           </div>
@@ -255,21 +339,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
             <div className="bg-[#1a1a24] p-3 rounded border border-[#2d2d3d] space-y-1">
               <div className="font-bold text-gray-400 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                <Tag className="w-3.5 h-3.5 text-[#7c5cbf]" /> Emotional Character
+                <Tag className="w-3.5 h-3.5 text-[#7c5cbf]" /> Sắc Thái & Cảm Xúc
               </div>
               <div className="text-gray-200">{analysisResult.emotionalCharacter}</div>
             </div>
 
             <div className="bg-[#1a1a24] p-3 rounded border border-[#2d2d3d] space-y-1">
               <div className="font-bold text-gray-400 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                <Compass className="w-3.5 h-3.5 text-[#7c5cbf]" /> Suggested Melody Direction
+                <Compass className="w-3.5 h-3.5 text-[#7c5cbf]" /> Hướng Dẫn Soạn Giai Điệu (Melody)
               </div>
               <div className="text-gray-300 leading-relaxed">{analysisResult.suggestedMelodyDirection}</div>
             </div>
 
             <div className="bg-[#1a1a24] p-3 rounded border border-[#2d2d3d] space-y-1">
               <div className="font-bold text-gray-400 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                <FileText className="w-3.5 h-3.5 text-[#7c5cbf]" /> Harmonic Insights
+                <FileText className="w-3.5 h-3.5 text-[#7c5cbf]" /> Nhận Định Hòa Âm
               </div>
               <div className="text-gray-300 leading-relaxed">{analysisResult.harmonicInsights}</div>
             </div>
@@ -278,7 +362,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           {/* Genre Fit & Lyric Mood Badges */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 border-t border-[#2d2d3d] text-xs">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Genre Fit:</span>
+              <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Thể Loại Phù Hợp:</span>
               {analysisResult.genreFit?.map((g) => (
                 <span
                   key={g}

@@ -53,10 +53,23 @@ export class AceStepProvider implements MusicProvider {
         signal,
       });
 
-      const data = await response.json().catch(() => ({}));
+      const contentType = response.headers.get("content-type") || "";
+      const text = await response.text();
+      let data: any = {};
+      try {
+        if (contentType.includes("application/json") || !text.trim().startsWith("<")) {
+          data = JSON.parse(text);
+        }
+      } catch {
+        data = {};
+      }
 
       if (!response.ok || !data.success) {
-        const errorMsg = data.error || `ACE-Step provider failed with status ${response.status}.`;
+        const errorMsg =
+          data.error ||
+          (text.trim().startsWith("<")
+            ? "ACE-Step server endpoint is only available when running the Node.js backend. Fallback synthesizer is ready to play your chords!"
+            : `ACE-Step provider failed with status ${response.status}.`);
         return {
           success: false,
           providerId: this.id,
